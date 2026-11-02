@@ -3019,7 +3019,7 @@ const EL={fire:['#fff0b0','#ff8a1a','#ff2a10'],frost:['#ffffff','#bff3ff','#4aa8
 const SPIN=new Set(['axe','dagger','hammer','star','orb']),pk=a=>a[(R()*a.length)|0];
 function spr(c){if(SP[c])return SP[c];const k=document.createElement('canvas');k.width=k.height=64;const x=k.getContext('2d'),r=x.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'#ffffff');r.addColorStop(.18,c);r.addColorStop(.5,c+'66');r.addColorStop(1,c+'00');x.fillStyle=r;x.fillRect(0,0,64,64);return SP[c]=k}
 function size(){if(!cv)return;D=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*D);cv.height=Math.round(H*D);cv.style.width=W+'px';cv.style.height=H+'px'}
-function init(){if(cv)return;cv=document.createElement('canvas');cv.id='vxc';cv.setAttribute('aria-hidden','true');document.body.append(cv);g=cv.getContext('2d',{desynchronized:true})||cv.getContext('2d');size();GGLife.onResize(size);
+function init(){if(cv)return;cv=document.createElement('canvas');cv.id='vxc';cv.setAttribute('aria-hidden','true');document.body.append(cv);g=cv.getContext('2d')||cv.getContext('2d');size();GGLife.onResize(size);
 if(typeof PJS=='object')for(const t in PJS){const w=t=='bolt'||t=='arrow',i=new Image();i.src='data:image/svg+xml,'+encodeURIComponent(PJS[t].replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" width="'+(w?160:80)+'" height="'+(w?40:80)+'" '));IM[t]=i}}
 function add(o){if(P.length>=MAXP)return;o.vx=o.vx||0;o.vy=o.vy||0;o.ax=o.ax||0;o.ay=o.ay||0;o.dr=o.dr||0;o.r=o.r||0;o.vr=o.vr||0;o.a=o.a==null?1:o.a;o.gr=o.gr||0;o.d=o.d||0;o.m=o.l;P.push(o)}
 function kick(){if(!run){run=1;last=0;requestAnimationFrame(loop)}}
@@ -6768,6 +6768,12 @@ body.rm .g.hint .gw.gg-image-wrap{filter:drop-shadow(0 0 2px #fff) drop-shadow(0
 <!-- Gemgrind Pass 2 continuation checkpoint: name-driven enemy portrait asset integration is prepared but intentionally remains inactive until verified original portrait assets are available. Existing procedural portrait renderer and all gameplay/save systems remain authoritative. -->
 <script>/* v5.6 settings: skull gem style picker */
 if(typeof renderSet=='function'){const _rs56=renderSet;renderSet=function(){const r=_rs56.apply(this,arguments);try{const el=$('setc');if(el&&!el.querySelector('.sk6set')){const k=ggSk6();const h='<div class="tg sk6set"><div><b>💀 Skull gem style</b><div class="m">Look of the direct-damage skull gem on the battle board. Changes apply instantly.</div></div><select id="sk6sel" style="max-width:46%">'+GG_SKULL_NAMES.map((n,i)=>'<option value="'+i+'"'+(i==k?' selected':'')+'>'+n+'</option>').join('')+'</select></div>';const js=el.querySelector('.v53set')||el.querySelector('.jxset');if(js)js.insertAdjacentHTML('afterend',h);else el.insertAdjacentHTML('beforeend',h);const sel=el.querySelector('#sk6sel');if(sel)sel.onchange=()=>{S.opt.sk6=+sel.value;save();ggSkullRefresh()}}}catch(e){}return r}}
+</script>
+<script id="v57-canvas-guard">
+/* v5.7e: Android Chrome can present {desynchronized:true} canvases as an opaque overlay, so the full-screen
+   effects canvas (#vxc) turned the whole game black except its particles. Strip the hint from every 2D canvas. */
+(()=>{const gc=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,opts){
+ if(opts&&typeof opts=='object'&&opts.desynchronized){opts=Object.assign({},opts);delete opts.desynchronized}return gc.call(this,type,opts)}})();
 </script>
 <!-- =====================================================================
      GEMGRIND v5.7 · iPhone / small-screen compatibility pass
