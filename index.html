@@ -600,6 +600,11 @@ box-shadow:inset 0 0 44px rgba(0,0,0,.9),0 0 0 1px #000,0 10px 24px rgba(0,0,0,.
 <style id="ggdb-css">
 html.gg-boot body::after{content:'Opening your chronicle…';position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;font:600 15px/1.4 'Cinzel',Georgia,serif;letter-spacing:1px;color:#e9c88c;background:radial-gradient(120% 70% at 50% 100%,#2a180c 0%,#0e0906 58%,#050302 100%)}
 </style>
+<script id="bx-hooks">
+/* v5.9 BALANCE HOOKS · BX(key) is a damage multiplier. 1.0 unless the debug ⚖️ Balance tab (window.DBAL) supplies one.
+   Every call site is tagged with a BX comment marker so tuned values can be baked into the formulas during final cleanup. */
+var BX=function(k){try{return window.DBAL?window.DBAL.m(k):1}catch(e){return 1}};
+</script>
 <script id="ggdb-boot">
 /* =====================================================================
    v4.4 SAVE ENGINE · storage layer (runs before any game code)
@@ -1204,7 +1209,7 @@ function achShow(){$('menu').hidden=true;const n=achPend(),b=[];if(n)b.push(['�
 const RMQ=matchMedia('(prefers-reduced-motion: reduce)'),RM=()=>!!(S.opt.rm||RMQ.matches),SPD=()=>S.opt.spd||1;
 /* combat clock: PAUSED holds every wait(); bumping BEP abandons any in-flight combat chain (restart / retreat) */
 let BEP=0,PAUSED=0,PQ=[];
-const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();try{localStorage.setItem('gg1',JSON.stringify(S))}catch(e){}if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
+const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();try{localStorage.setItem('gg1',JSON.stringify(S))}catch(e){}if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)/(window.QAFF||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
 let tsk=null,tsv=null;
 function tstat(){const c=C(),key=S.cls+':'+c.n.join();if(key===tsk)return tsv;const t={dodge:0,score:0,cdr:0,hp:0,mana:0,sh:0,all:0,wh:0,cd:[0,0,0,0,0,0],ks:{},quad:0,dur:0,gm:[0,0,0,0,0,0],crit:0,lsx:0,skd:0,pen:0,pot:0};
 for(const i of c.n){const o=WEB.n[i];if(!o)continue;if(o.t=='hy'){for(const q in o.s.fx)t[q]=(t[q]||0)+o.s.fx[q]}else if(o.t=='su'){const s=o.s;if(s.k=='gm')t.gm[s.c]+=s.v;else if(s.k=='all')t.all+=s.v/100;else t[s.k]+=s.v}else if(o.t=='mx')t.ks[o.m[0]]=1;else if(o.t=='mi')t[o.s[0]]+=o.s[1];else if(o.t=='ks')t.ks[o.k[0]]=1;else if(o.all)t.all+=o.all/100;else if(o.c!=null){t.cd[o.c]+=o.v/100;t.wh++}}tsk=key;return tsv=t}
@@ -1213,7 +1218,7 @@ function stat(){const s=stat0(),t=tstat(),c=S.cls;s.dodge=Math.min(.35,t.dodge+(
 if(c=='Warrior'){s.arm*=1.15;s.skd*=1.1}else if(c=='Paladin'){s.arm*=1.12;s.cap*=1.12}else if(c=='Rogue')s.crit+=.1;return s}
 function skillPow(l,wh,fw){const early=l<=10?.6:Math.min(1,.6+.04*(l-10));return early*(1+.02*(l-1)+.025*wh+.04*fw)}
 function stat0(){const c=C(),b=CL[S.cls],t=tstat(),ks=t.ks,g=gear(),sk=S.sk,f=S.fg,hp=(50+8*c.l+b.h*c.l/2+3*sk[4]+g.hp+pv('accessory')+t.hp)*(ks.glass?.6:1)*(1+.05*S.lab.med)*BAL.pst;
-return{atk:(b.a+c.l*1.6+g.atk)*(1+.01*sk[0])*(1+.05*S.lab.met)*BAL.pst,arm:(2+c.l*.5+g.def)*(1+.01*sk[1])*(1+.05*S.lab.met)*(1+.03*f.armor)*(ks.bastion?2:1)*BAL.pst,hp,
+return{atk:(b.a+c.l*1.6+g.atk*BX('gear_atk')/*BX*/)*(1+.01*sk[0])*(1+.05*S.lab.met)*BAL.pst,arm:(2+c.l*.5+g.def)*(1+.01*sk[1])*(1+.05*S.lab.met)*(1+.03*f.armor)*(ks.bastion?2:1)*BAL.pst,hp,
 cm:Math.max(.4,1-.004*sk[2]-g.cm/100)*(ks.iron?2:1),gold:(1+.01*sk[3])*(1+g.gold/100)*(ks.avarice?2:1),xp:(1+g.xp/100)*(ks.avarice?2:1)*BAL.xp,
 pow:1+g.pow/100,skd:(1+g.skd/100)*(1+.06*f.weapon)*(1+t.skd),dmg:D().pd*shardMul()*(1+t.all)*(ks.glass?1.6:1)*(ks.bastion?.7:1),
 crit:.05+.02*f.amulet+g.crit/100+t.crit,ring:.06*f.ring+.04*t.mana,cap:(hp*.6+t.sh+g.msh)*(1+.1*f.armor)*(ks.bastion?2:1),cd:t.cd.map((v,i)=>v+(g['g'+i]||0)/100),mana:t.mana,sh:t.sh,ks,alc:(1+.01*sk[10])*(1+t.pot),skp:skillPow(c.l,t.wh,f.weapon)*(1+.04*S.lab.run)*(1+.05*LV('cor')),wh:t.wh,quad:t.quad,dur:t.dur,gm:t.gm,lsx:t.lsx,pen:t.pen}}
@@ -1769,19 +1774,19 @@ function eliteHex(){const a=E.act;inflict('p',a==1?'burn':a==2?'poison':a==3?'fr
 let curK=null;
 /* every player heal funnels through here; Thorn Barrier banks the overheal */
 function healP(v){const st=stat(),room=Math.max(0,st.hp-P.hp);if(v<=room){P.hp+=v;return}P.hp=Math.max(P.hp,st.hp);if(st.ks.thorns)P.thorn=Math.min(st.hp*.5,(P.thorn||0)+v-room)}
-function hit(d){if(E.dead)return 0;const st=stat(),g=gear(),sm9=curK?skMeta(curK,S.cls).type:'physical',cr=Math.random()<st.crit+(sm9=='physical'?.03*LV('prc'):0);d*=st.dmg*(cr?1.75:1)*(E.st.sund>0?1.2:1)*(E.st.curse>0?1.15:1);if(E.arm>0){let cp=0;if(curK)for(const c in curK[1])cp=Math.max(cp,g['pg'+c]||0);const pe=Math.min(.9,.05*S.fg.pen+(g.pen+cp)/100+(sm9=='magical'?.06*LV('swp'):0)),a=Math.min(E.arm,d*(1-pe));E.arm-=a;d-=a}const dealt=Math.max(0,Math.min(d,E.hp));S.ach.dmg+=dealt;E.hp-=d;if(g.ls+st.lsx>0&&dealt>0)healP(dealt*(g.ls+st.lsx)/100);
+function hit(d){if(E.dead)return 0;const st=stat(),g=gear(),sm9=curK?skMeta(curK,S.cls).type:'physical',cr=Math.random()<st.crit+(sm9=='physical'?.03*LV('prc'):0);d*=st.dmg*(cr?1.75*BX('crit')/*BX*/:1)*BX('all_p')/*BX*/*(E.st.sund>0?1.2:1)*(E.st.curse>0?1.15:1);if(E.arm>0){let cp=0;if(curK)for(const c in curK[1])cp=Math.max(cp,g['pg'+c]||0);const pe=Math.min(.9,.05*S.fg.pen+(g.pen+cp)/100+(sm9=='magical'?.06*LV('swp'):0)),a=Math.min(E.arm,d*(1-pe));E.arm-=a;d-=a}const dealt=Math.max(0,Math.min(d,E.hp));S.ach.dmg+=dealt;E.hp-=d;if(g.ls+st.lsx>0&&dealt>0)healP(dealt*(g.ls+st.lsx)/100);
 if(d>.5){if(cr){fl('💥 CRIT! -'+Math.round(d),'#ffd23f','ecard',0,'crit');if(!RM()){const ec=$('ecard');ec.classList.remove('chit');void ec.offsetWidth;ec.classList.add('chit');setTimeout(()=>ec.classList.remove('chit'),400)}}else fl('-'+Math.round(d)+' DMG','#f0a050','ecard')}achCheck();if(st.ks.vamp&&dealt>0)healP(dealt*.15);if(E.hp<=0&&!sty&&!dead)win();return dealt}
 async function atk(h,keep){const b=$('ef'),t=$('turnb');if(!keep)t.textContent=h?'⚠️ Heavy strike!':'Enemy turn…';t.hidden=false;b.classList.remove('lunge','hv');void b.offsetWidth;b.classList.add('lunge');if(h)b.classList.add('hv');await wait(h?420:280)}
 async function hurt(d,ab,h){const c=$('pcard');c.classList.remove('hit');void c.offsetWidth;c.classList.add('hit');
 if(d>0)fl('-'+Math.round(d)+' DMG'+(ab>.5?' (🛡️'+Math.round(ab)+')':''),'#ef4444');else fl('🛡️ Blocked','#60a5fa');
 draw();await wait(h?650:450);c.classList.remove('hit');$('ef').classList.remove('lunge','hv');$('turnb').hidden=true}
-async function pdmg(d,h){d*=D().ed*(E&&E.st&&E.st.curse>0?.75:1);if(d>0&&Math.random()<stat().dodge){fl('💨 DODGED!','#c9f3ff');sfx('whoosh');draw();await wait(h?420:320);$('ef').classList.remove('lunge','hv');$('turnb').hidden=true;return}const ab=Math.min(P.arm,d);P.arm-=ab;d-=ab;if(P.thorn>0&&d>0&&E&&!E.dead){const r=Math.min(P.thorn,d);P.thorn-=r;d-=r;E.hp-=r;fl('🌹 Thorns reflect '+Math.round(r),'#86efac','ecard');}P.hp-=d;await hurt(d,ab,h);/* v5.4 audit 62: defeat still wins a simultaneous KO, but a Phoenix revive must not leave a dead enemy standing */if(P.hp<=0)die();if(!dead&&E&&E.hp<=0&&!E.dead&&!sty)win()}
+async function pdmg(d,h){d*=D().ed*(E&&E.st&&E.st.curse>0?.75:1)*BX('all_e')/*BX*/;if(d>0&&Math.random()<stat().dodge){fl('💨 DODGED!','#c9f3ff');sfx('whoosh');draw();await wait(h?420:320);$('ef').classList.remove('lunge','hv');$('turnb').hidden=true;return}const ab=Math.min(P.arm,d);P.arm-=ab;d-=ab;if(P.thorn>0&&d>0&&E&&!E.dead){const r=Math.min(P.thorn,d);P.thorn-=r;d-=r;E.hp-=r*BX('thorns_p')/*BX*/;fl('🌹 Thorns reflect '+Math.round(r),'#86efac','ecard');}P.hp-=d;await hurt(d,ab,h);/* v5.4 audit 62: defeat still wins a simultaneous KO, but a Phoenix revive must not leave a dead enemy standing */if(P.hp<=0)die();if(!dead&&E&&E.hp<=0&&!E.dead&&!sty)win()}
 function cost(k,who){const s0=who?null:stat(),m=who?1:s0.cm*(SKCLS[k[0]]==S.cls?1-s0.cdr:1),o={};for(const c in k[1])o[c]=Math.min(CAP,Math.ceil(k[1][c]*m));return o}
 const can=(m,o)=>Object.keys(o).every(c=>m[c]>=o[c]),pay=(m,o)=>{for(const c in o)m[c]-=o[c]};
 function skulls(v){const c=[];B.forEach((g,i)=>{if(isM(g)&&g!=6)c.push(i)});for(let n=0;n<v&&c.length;n++)B[c.splice(Math.floor(Math.random()*c.length),1)[0]]=6}
 async function cast(k,who){const st=stat(),e=k[2],v=k[3]*(who?1:sm(slv(k[0]))*BAL.psk);fl(k[0],'#ffd27a',who?'ecard':'pcard');
-if(who){if(e=='dmg'){await atk(0,1);await pdmg(E.at*v,0)}else if(e=='arm')E.arm+=E.at*v*.7;else if(e=='heal')E.hp=Math.min(E.mx,E.hp+E.mx*v*.6);else if(e=='sk')skulls(v)}
-else{curK=k;const off=OFFE.has(e),ch=off&&P.cc>1?P.cc:1,pw=st.pow*cmul(k,st.cd)*ch,hm=(st.ks.vamp?.5:1)*st.heal,ex=st.ks.exec&&E.hp<E.mx*.35?1.6:1,H0=E.hp,D0=st.atk*v*pw*st.skp*ex;if(ch>1){fl('⚡ COMBO ×'+fmtM(ch)+' SKILL!','#ffd23f','bw',1);P.cc=1}
+if(who){if(e=='dmg'){await atk(0,1);await pdmg(E.at*v*BX('es:'+k[0])/*BX*/,0)}else if(e=='arm')E.arm+=E.at*v*.7;else if(e=='heal')E.hp=Math.min(E.mx,E.hp+E.mx*v*.6);else if(e=='sk')skulls(v)}
+else{curK=k;const off=OFFE.has(e),ch=off&&P.cc>1?P.cc:1,pw=st.pow*cmul(k,st.cd)*ch,hm=(st.ks.vamp?.5:1)*st.heal,ex=st.ks.exec&&E.hp<E.mx*.35?1.6:1,H0=E.hp,D0=st.atk*v*pw*st.skp*ex*BX('ps:'+k[0])/*BX*/;if(ch>1){fl('⚡ COMBO ×'+fmtM(ch)+' SKILL!','#ffd23f','bw',1);P.cc=1}
 if(e=='dmg')hit(D0);else if(e=='arm')addArm(st.arm*v*st.pow);else if(e=='heal')healP(st.hp*v*st.pow*hm);
 else if(e=='drain'){const dealt=hit(D0);healP(dealt*.5*hm)}
 else if(e=='mana'){for(let n=0;n<v;n++){const c=Math.floor(Math.random()*6);P.m[c]=Math.min(CAP,P.m[c]+1)}fl('+'+Math.round(v)+' Mana','#7dd3fc')}
@@ -1789,7 +1794,7 @@ else if(e=='shred'){hit(D0);if(!E.dead){E.arm=0;inflict('e','sund',2);fl('🪓 A
 else if(e=='nova'){hit(D0);if(!E.dead)inflict('e','frz')}
 else if(e=='envn'){hit(D0);if(!E.dead)inflict('e','poison',4)}
 else if(e=='turn'){const u=UNDEAD.test(E.n),m=u?2+.02*C().l:1;if(u)fl('☀️ UNDEAD ×'+m.toFixed(2),'#fff1b8','bw',1);hit(D0*m)}
-else if(e=='bash'){hit((st.atk*.45+st.arm*1.1)*v*pw*st.skp*ex);if(!E.dead)inflict('e','stun')}
+else if(e=='bash'){hit((st.atk*.45+st.arm*1.1)*v*pw*st.skp*ex*BX('ps:'+k[0])/*BX*/);if(!E.dead)inflict('e','stun')}
 else if(e=='trap'){hit(D0*.35);if(!E.dead)layTraps(Math.min(6,Math.round(k[3]+(slv(k[0])-1)*.3)))}
 else if(e=='sacr'){const c0=st.hp*.15,g=Math.max(1,Math.round(v));P.hp=Math.max(1,P.hp-c0);P.m=P.m.map(x=>Math.min(CAP,x+g));fl('🩸 -'+Math.round(c0)+' HP → +'+g*6+' Mana','#ff6a8a','pcard')}
 else skulls(v);
@@ -1815,11 +1820,11 @@ function cosmos(){const L=LV('cos');if(!L||GT||!E||E.dead||dead)return;const st=
 function weave(){const L=[];B.forEach((v,i)=>{if(v==7||FZ[i]>0)L.push(i)});if(!L.length)return;const i=L[Math.floor(Math.random()*L.length)];FZ[i]=0;if(B[i]==7){B[i]=rnd();SP[i]=0}fl('♨️ Thawing Rune frees a tile','#c9f3ff','pcard');syncBoard()}
 function turnTick(){if(!E||GT||E.dead)return;E.pt=(E.pt||0)+1;if(E.pt%3==0&&stat().ks.weaver)weave();if(E.boss&&!E.enr&&E.pt>15+LV('pvt')){E.enr=1;fl('😡 ENRAGED!','#ff3a2a','bw',1);msg(E.n+' is ENRAGED! Its skulls hit twice as hard and the board burns every round.');syncBoard()}}
 async function roundEnd(){const st=stat();let any=0;
-if(E.enr&&!E.dead)P.st.burn=Math.max(P.st.burn,1);if(P.st.burn>0){const d=Math.max(1,st.hp*(E.enr?.09:.05));P.hp-=d;fl('🔥 -'+Math.round(d)+' DMG','#ff7a3a','pcard');P.st.burn--;any=1}
+if(E.enr&&!E.dead)P.st.burn=Math.max(P.st.burn,1);if(P.st.burn>0){const d=Math.max(1,st.hp*(E.enr?.09:.05)*BX('dot_burn_p')/*BX*/);P.hp-=d;fl('🔥 -'+Math.round(d)+' DMG','#ff7a3a','pcard');P.st.burn--;any=1}
 if(P.st.poison>0){let l=0;P.m=P.m.map(v=>{const n=Math.max(0,v-2);l+=v-n;return n});fl('☠️ -'+l+' Mana','#a3e635','pcard');P.st.poison--;any=1}
-if(E.st.burn>0&&!E.dead){const d=Math.max(1,E.mx*.04);E.hp-=d;fl('🔥 -'+Math.round(d)+' DMG','#ff7a3a','ecard');E.st.burn--;any=1}
-if(E.st.poison>0){E.m=E.m.map(v=>Math.max(0,v-2));fl('☠️ Mana drained','#a3e635','ecard');if(st.ks.venom&&!E.dead){const d=E.mx*.03;E.hp-=d;fl('🦂 -'+Math.round(d)+' DMG','#a3e635','ecard')}if(S.cls=='Rogue'&&!E.dead){const d=E.mx*.025;E.hp-=d;fl('🗡️ Toxin -'+Math.round(d)+' DMG','#a3e635','ecard')}E.st.poison--;any=1}
-if(E.tac&&!E.dead&&LV('prg')){const d=E.mx*.005*LV('prg');E.hp-=d;fl('🧬 Curse -'+Math.round(d),'#c084fc','ecard');any=1}
+if(E.st.burn>0&&!E.dead){const d=Math.max(1,E.mx*.04*BX('dot_burn_e')/*BX*/);E.hp-=d;fl('🔥 -'+Math.round(d)+' DMG','#ff7a3a','ecard');E.st.burn--;any=1}
+if(E.st.poison>0){E.m=E.m.map(v=>Math.max(0,v-2));fl('☠️ Mana drained','#a3e635','ecard');if(st.ks.venom&&!E.dead){const d=E.mx*.03*BX('dot_venom')/*BX*/;E.hp-=d;fl('🦂 -'+Math.round(d)+' DMG','#a3e635','ecard')}if(S.cls=='Rogue'&&!E.dead){const d=E.mx*.025*BX('dot_toxin')/*BX*/;E.hp-=d;fl('🗡️ Toxin -'+Math.round(d)+' DMG','#a3e635','ecard')}E.st.poison--;any=1}
+if(E.tac&&!E.dead&&LV('prg')){const d=E.mx*.005*LV('prg')*BX('dot_purge')/*BX*/;E.hp-=d;fl('🧬 Curse -'+Math.round(d),'#c084fc','ecard');any=1}
 if(E.st.curse>0){E.st.curse--;any=1}if(E.st.sund>0)E.st.sund--;
 if(E.st.fi>0)E.st.fi--;for(let i=0;i<FZ.length;i++)if(FZ[i]>0)FZ[i]--;
 if(any){draw();await wait(380)}
@@ -1842,7 +1847,7 @@ const rk=new Set;m.forEach(i=>{if(B[i]!=7)for(const j of nb4(i))if(B[j]==7&&!m.h
 let rocks=rk.size;m.forEach(i=>{if(isM(B[i]))cs[B[i]]++;else if(B[i]==7)rocks++});const all=[...m,...rk];
 let cm=pl?1+(combo-1)*(st.ks.chain?1.5:1):1+(combo-1)*.5;if(flat){combo=Math.max(combo,flat);cm=flat}peak=Math.max(peak,cm);if(pl&&cm>S.ach.casc)S.ach.casc=cm;
 if(fxq.length){fxPlay(fxq);shake(fxq.some(f=>f.s==4||f.s==7||f.r==2||f.w)||det>2);if(det)fl('+×'+det+' '+fxName(fxq)+' COMBO!',pl?'#7df9ff':'#ff8a8a','bw',1,'spc');await wait(280)}
-if(det&&pl&&st.ks.storm&&!GT&&!E.dead){fl('🌩️ Chain Lightning ×'+det,'#fff27a','ecard');hit(st.atk*.6*det)}
+if(det&&pl&&st.ks.storm&&!GT&&!E.dead){fl('🌩️ Chain Lightning ×'+det,'#fff27a','ecard');hit(st.atk*.6*det*BX('ks_storm')/*BX*/)}
 if(combo>1)fl('COMBO ×'+fmtM(cm)+'!',pl?'#ffd23f':'#ff6b6b','bw',1);
 glowFlash(all,cs);await wait(150);
 for(const sp of spawns)sp.cells.forEach(i=>{if(i!=sp.i&&m.has(i)&&tiles[i])setPos(tiles[i],sp.i)});
@@ -1855,17 +1860,17 @@ const gd=Math.floor((cs[1]*2+(GT?0:m.size*st.score))*st.gold*cm);
 if(GT){gcollect(cs,cm);S.gold+=gd;GT.g+=gd;qev('gems',m.size)}
 else{const M=pl?P.m:E.m;let gain=0,ov=0;for(let c=0;c<6;c++){let a=cs[c];if(pl&&st.ring)for(let q=0;q<cs[c];q++)if(Math.random()<st.ring)a++;a=Math.round(a*cm*(pl?1+st.gm[c]:BAL.emana));gain+=a;ov+=Math.max(0,M[c]+a-CAP);M[c]=Math.min(CAP,M[c]+a)}
 if(pl&&st.ks.tide&&guard>0){for(let c=0;c<6;c++)M[c]=Math.min(CAP,M[c]+1);fl('🌀 Tidal Momentum','#7df9ff','pcard')}
-if(pl&&st.ks.overflow&&ov>0&&!E.dead){fl('🌊 Overflow ×'+ov,'#7dd3fc','ecard');hit(st.atk*.4*ov)}
-if(pl&&st.ks.midas&&cs[1]&&!E.dead){fl('👑 Golden Touch','#ffd23f','ecard');hit(st.atk*.5*cs[1]*cm)}
+if(pl&&st.ks.overflow&&ov>0&&!E.dead){fl('🌊 Overflow ×'+ov,'#7dd3fc','ecard');hit(st.atk*.4*ov*BX('ks_overflow')/*BX*/)}
+if(pl&&st.ks.midas&&cs[1]&&!E.dead){fl('👑 Golden Touch','#ffd23f','ecard');hit(st.atk*.5*cs[1]*cm*BX('ks_midas')/*BX*/)}
 if(pl){if(gain)fl('+'+gain+' Mana','#7dd3fc','pcard');qev('gems',m.size);if(cs[6]){qev('skull',cs[6]);S.ach.sk+=cs[6]}S.gold+=gd;cs.forEach((n,i)=>{if(n)addXp(n,SKM[i],1)})}
 if(cs[2])cleanse(pl?'p':'e')}
-{const tp=all.filter(i=>TR[i]>0).length;if(tp&&who&&!GT&&!E.dead){fl('🪤 '+tp+' TRAP'+(tp>1?'S':'')+' SPRUNG!','#9be38a','ecard',1);hit(st.atk*1.6*tp);sfx('impact',1)}}
+{const tp=all.filter(i=>TR[i]>0).length;if(tp&&who&&!GT&&!E.dead){fl('🪤 '+tp+' TRAP'+(tp>1?'S':'')+' SPRUNG!','#9be38a','ecard',1);hit(st.atk*1.6*tp*BX('trap_sprung')/*BX*/);sfx('impact',1)}}
 all.forEach(i=>{B[i]=-1;FZ[i]=0;SP[i]=0;TR[i]=0});
 for(let x=0;x<N;x++){let w=N-1;for(let y=N-1;y>=0;y--){const s=y*N+x;if(B[s]>=0){if(w!=y){const d=w*N+x;for(const A of[B,tiles,FZ,SP,TR]){A[d]=A[s];A[s]=A===tiles?null:A===B?-1:0}}w--}}
 for(let n=0;w>=0;w--,n++){const d=w*N+x;B[d]=rnd();FZ[d]=0;SP[d]=0;TR[d]=0;if(tiles[d])tiles[d].remove();tiles[d]=mkTile(B[d],d,-1-n)}}
 syncBoard();await wait(320);
-if(cs[6]&&!GT){if(who){if(st.ks.iron)fl('💀 Immune','#9ca3af');else{await atk(0);await pdmg(E.at*.6*cs[6]*cm*D().sk*(E.enr?2:1),0)}if(E.elite&&!dead)eliteHex()}else if(!st.ks.splash&&Math.random()<eBlock()){fl('🛡️ BLOCKED!'+(S.fg.pen?'':' Forge a Piercer'),'#93c5fd','ecard');msg(E.n+' blocked your skull attack!')}else{hit(st.atk*.8*cs[6]*cm*st.skd*D().sk*(st.ks.splash?1.25:1)*(guard>0?1+.06*LV('csr'):1));if(st.ks.splash&&!E.dead){fl('🌋 Elemental Splash','#ff9a3a','ecard');inflict('e','burn',2)}}}
-if(wipe&&!GT&&!E.dead&&!dead){if(pl){fl('🌌 BOARD WIPE ×'+fmtM(cm)+'!','#e9d5ff','ecard');hit(st.atk*.25*all.length*cm)}else{await atk(1);await pdmg(E.at*3,1)}}
+if(cs[6]&&!GT){if(who){if(st.ks.iron)fl('💀 Immune','#9ca3af');else{await atk(0);await pdmg(E.at*.6*cs[6]*cm*D().sk*(E.enr?2:1)*BX('skull_e')/*BX*/,0)}if(E.elite&&!dead)eliteHex()}else if(!st.ks.splash&&Math.random()<eBlock()){fl('🛡️ BLOCKED!'+(S.fg.pen?'':' Forge a Piercer'),'#93c5fd','ecard');msg(E.n+' blocked your skull attack!')}else{hit(st.atk*.8*cs[6]*cm*st.skd*D().sk*(st.ks.splash?1.25:1)*(guard>0?1+.06*LV('csr'):1)*BX('skull_p')/*BX*/);if(st.ks.splash&&!E.dead){fl('🌋 Elemental Splash','#ff9a3a','ecard');inflict('e','burn',2)}}}
+if(wipe&&!GT&&!E.dead&&!dead){if(pl){fl('🌌 BOARD WIPE ×'+fmtM(cm)+'!','#e9d5ff','ecard');hit(st.atk*.25*all.length*cm*BX('wipe_p')/*BX*/)}else{await atk(1);await pdmg(E.at*3*BX('wipe_e')/*BX*/,1)}}
 draw();achCheck()}
 if(!who&&!GT&&peak>=2&&!E.dead){P.cc=Math.min(5,Math.max(P.cc,peak));fl('⚡ Next skill ×'+fmtM(P.cc),'#ffd27a','pcard')}
 return big}
@@ -5226,7 +5231,7 @@ const _rnd=roundEnd;roundEnd=async function(){const r=await _rnd.apply(this,argu
 const _pdm=pdmg;pdmg=async function(){const ax=!GT&&E&&E.afx&&E.afx.length?E.afx:null,h0=P.hp,r=await _pdm.apply(this,arguments);
  if(ax&&E&&!E.dead){const lost=h0-Math.max(0,P.hp);if(lost>0){if(ax.includes('vamp')){const v=lost*.4;E.hp=Math.min(E.mx,E.hp+v);fl('🧛 +'+Math.round(v)+' HP','#ff6a8a','ecard')}if(ax.includes('venom')&&!dead&&R()<.35)inflict('p','poison',2)}}return r};
 const _hit=hit;hit=function(){const ax=!GT&&E&&!E.dead&&E.afx&&E.afx.includes('thorns'),h0=ax?E.hp:0,r=_hit.apply(this,arguments);
- if(ax&&!dead){const dl=h0-Math.max(0,E.hp),v=Math.min(dl*.08,Math.max(0,P.hp-1));if(v>=1){P.hp-=v;fl('🌵 -'+Math.round(v)+' Thorns','#c9a24e','pcard')}}return r};
+ if(ax&&!dead){const dl=h0-Math.max(0,E.hp),v=Math.min(dl*.08*BX('affix_thorns')/*BX*/,Math.max(0,P.hp-1));if(v>=1){P.hp-=v;fl('🌵 -'+Math.round(v)+' Thorns','#c9a24e','pcard')}}return r};
 const _rb=restartBattle;restartBattle=function(){if(CH)CH.seedNext=CH.sp.bs+CH.f*7919;const r=_rb.apply(this,arguments);if(E&&!GT){E.hz=0;if(E.sh0&&!campaignActive())E.arm=E.sh0}return r};
 /* --- NG+ drop quality: victory-chest rarity can climb one step --- */
 const _rr=rollR;rollR=function(boss,rng){let r=_rr.apply(this,arguments);const t=ngT();if(!rng&&t>0&&!CH&&campaignActive()&&r<4&&R()<ngDrop(t))r++;return r};
@@ -5699,7 +5704,7 @@ if(document.body)overlays();else document.addEventListener('DOMContentLoaded',ov
 #msb>span{position:absolute;inset:0;display:block;text-align:center;font:700 9px/12px var(--gfont);letter-spacing:.3px;color:#fff1cf;text-shadow:0 1px 0 #000,0 0 3px #000,0 0 2px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
 #msb.pop>i{animation:msbp .8s ease-out}
 /* v5.7f: Next Goal bar locked to a thin strip inside the frame's bottom rail, below the board, so it can never grow over the last gem row */
-#msb{top:calc(100% + 2px)!important;bottom:auto!important;left:9%!important;right:9%!important;height:9px!important;min-height:0!important;max-height:9px!important;box-sizing:border-box!important;padding:0!important;margin:0!important;contain:strict;border-radius:5px!important}
+#msb{top:calc(100% + 2px)!important;bottom:auto!important;left:9%!important;right:auto!important;width:82%!important;min-width:0!important;max-width:82%!important;height:9px!important;min-height:0!important;max-height:9px!important;box-sizing:border-box!important;padding:0!important;margin:0!important;contain:strict;border-radius:5px!important}
 #msb>i{border-radius:4px!important}
 #msb>span{font-size:7.5px!important;line-height:9px!important;padding:0 4px!important;-webkit-text-size-adjust:none;text-size-adjust:none}
 @keyframes msbp{0%{filter:brightness(2.4) saturate(1.4)}100%{filter:none}}
@@ -6174,7 +6179,7 @@ function gemCheck(gs,cells){const inA=new Set(cells);
 function cau(){if(E&&!E.dead){E.cau=2;fl('🔥 Cauterized!','#ffb070','ecard')}}
 function spread(src,inA){const C2=[];for(const i of src.cells)for(const j of nb4(i))if(!inA.has(j)&&isM(B[j])&&B[j]!=4&&B[j]!=6&&!SP[j]&&!(FZ[j]>0)&&!C2.includes(j))C2.push(j);
  for(let i=C2.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[C2[i],C2[j]]=[C2[j],C2[i]]}const L=C2.slice(0,3);L.forEach(j=>{B[j]=4});if(L.length)fl('🍄 Rot spreads to '+L.length+' gem'+(L.length>1?'s':''),'#c4f06a','pcard')}
-function fire(id,ga,gb,inA){const X=GX[id],st=stat(),n=ga.cells.size+gb.cells.size,mk=boostOf(id),mm=mk?MUTX[mk].m:1,base=st.atk*n*mm,H=()=>E&&!E.dead&&!dead;
+function fire(id,ga,gb,inA){const X=GX[id],st=stat(),n=ga.cells.size+gb.cells.size,mk=boostOf(id),mm=mk?MUTX[mk].m:1,base=st.atk*n*mm*BX('cx:'+id)/*BX*/,H=()=>E&&!E.dead&&!dead;
  fl(X.i+' '+X.n.toUpperCase()+'!'+(mk?' 🎭':''),X.col,'bw',1,'spc');try{sfx('boom')}catch(e){}
  switch(id){
   case'steam':{let t=0;for(let i=0;i<FZ.length;i++)if(FZ[i]>0){FZ[i]=0;t++}hit(base*.45);if(H())inflict('e','burn',2);if(t)fl('♨️ '+t+' frozen gem'+(t>1?'s':'')+' thawed','#e8f4ff','pcard');break}
@@ -6523,7 +6528,7 @@ try{if(Array.isArray(tiles))for(const t of tiles)if(t&&t.firstChild){t.firstChil
 /* Autoplay bot + Auto-Continue + Auto-Retry. Self-contained: it only reads game globals and wraps win()/die() from the outside. */
 /* Hidden collapsible console #debugTestingConsole: toggled by the tiny cog in the bottom-left corner, or the ` (backtick) / F2 keys. Esc closes it.
    Left column: live Play Session Timer + the four automation toggles. Right column: 📋 Live Bug Tracker & Runtime Logs, fed by window.logDebugIssue(). */
-(()=>{const SEV={INFO:'#a8c4d0',WARNING:'#f0c060',ERROR:'#ff6a5a',GLITCH:'#d58aff',PERFORMANCE:'#7df9a8',QA:'#e9c88c',VISUAL:'#ff8fd0',GAMEPLAY:'#ffb35c'},MAXLOG=300,T0=performance.now();
+(()=>{const SEV={INFO:'#a8c4d0',WARNING:'#f0c060',ERROR:'#ff6a5a',GLITCH:'#d58aff',PERFORMANCE:'#7df9a8',QA:'#e9c88c',VISUAL:'#ff8fd0',GAMEPLAY:'#ffb35c',BALANCE:'#7fd1ff',ADVISOR:'#5ee0c8'},MAXLOG=300,T0=performance.now();
 const st=document.createElement('style');st.textContent=
 '#dbgCog{position:fixed;left:calc(4px + env(safe-area-inset-left,0px));bottom:calc(4px + env(safe-area-inset-bottom,0px));z-index:96;width:22px!important;height:22px!important;min-width:0!important;min-height:0!important;padding:0!important;display:flex;align-items:center;justify-content:center;font:13px/1 system-ui,sans-serif!important;color:#c9a24e!important;background:rgba(10,7,5,.55)!important;border:1px solid rgba(201,162,78,.45)!important;border-radius:50%!important;box-shadow:none!important;text-shadow:none!important;opacity:.32;transform:none!important;filter:none!important;transition:opacity .2s}'
 +'#dbgCog:hover,#dbgCog.open,#dbgCog.alert{opacity:.95}#dbgCog .ic{display:inline-block;transition:transform .3s}#dbgCog.open .ic{transform:rotate(90deg)}'
@@ -6543,7 +6548,7 @@ const st=document.createElement('style');st.textContent=
 +'#debugTestingConsole .dbgb{min-height:34px!important;min-width:0!important;padding:4px 6px!important;font:600 10px/1.25 ui-monospace,Menlo,monospace!important;letter-spacing:0!important;text-align:left;color:#d6c6aa!important;background:rgba(255,235,200,.04)!important;border:1px solid rgba(201,162,78,.32)!important;border-radius:5px!important;box-shadow:none!important;text-shadow:none!important;transform:none!important;filter:none!important}'
 +'#debugTestingConsole .dbgb:hover{border-color:rgba(233,200,140,.8)!important}'
 +'#debugTestingConsole .dbgb.on{color:#1a0f04!important;background:linear-gradient(180deg,#e9c88c,#b08838)!important;border-color:#f4dc9a!important}'
-+'#apbtn{order:1}#arbtn{order:2}#acbtn{order:3}#qabtn{order:4}#bmbtn{order:5;grid-column:1/-1}'
++'#apbtn{order:1}#arbtn{order:2}#acbtn{order:3}#qabtn{order:4}#bmbtn{order:5}#flagbtn{order:6;color:#ffd0ec!important;border-color:rgba(255,143,208,.6)!important}'
 +'#dbgCounts{display:flex;flex-wrap:wrap;gap:4px}#dbgCounts span{padding:1px 5px;border-radius:3px;border:1px solid rgba(201,162,78,.2);font-size:9px}'
 +'#dbgRh{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#e9c88c;font-size:10px}#dbgRh>span:last-child{display:flex;gap:4px}'
 +'#dbgLog{flex:1;min-height:150px;height:210px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-user-select:text;user-select:text;padding:5px 6px;border:1px solid rgba(201,162,78,.28);border-radius:5px;background:rgba(0,0,0,.45);font:500 9.5px/1.4 ui-monospace,Menlo,monospace}'
@@ -6569,7 +6574,7 @@ setInterval(()=>{timeEl.textContent=hms(performance.now()-T0);const h=!$('create
 const entries=[];
 function paintCounts(){cntEl.innerHTML=Object.keys(SEV).filter(k=>counts[k]).map(k=>'<span style="color:'+SEV[k]+'">'+k+' '+counts[k]+'</span>').join('')||'<span>none</span>'}
 window.logDebugIssue=function(severity,message){const sv=String(severity||'INFO').toUpperCase(),k=SEV[sv]?sv:'INFO',msg=String(message==null?'':message).slice(0,400),t=hms(performance.now()-T0);
- entries.push({t,k,msg});counts[k]=(counts[k]||0)+1;
+ entries.push({t,k,msg});counts[k]=(counts[k]||0)+1;try{window.__qaTap&&window.__qaTap(k,msg,t)}catch(_){}
  const stick=logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight<24,emp=logEl.querySelector('.empty');if(emp)emp.remove();
  const row=document.createElement('div'),tm=document.createElement('time'),b=document.createElement('b');tm.textContent=t;b.textContent=k+':';b.style.color=SEV[k];row.append(tm,b,document.createTextNode(' '+msg));logEl.append(row);
  while(logEl.children.length>MAXLOG){logEl.firstChild.remove();entries.shift()}if(stick)logEl.scrollTop=logEl.scrollHeight;paintCounts();
@@ -6587,7 +6592,7 @@ const ready=()=>isBattleActive===true&&!busy&&!sty&&!PAUSED&&!dead&&!walking&&!c
 const val=v=>GT?(v in G2M?10:1):v==6?10:isM(v)?3:0;
 function pick(){let best=null;tryMoves((a,b)=>{const m=find();if(!m.size)return;let s=m.size;m.forEach(i=>{s+=val(B[i])});if(!best||s>best.s)best={a,b,s}});if(best)return[best.a,best.b];return catMove()||specPair()}
 async function stuck(){const e=[];for(let i=0;i<N*N;i++){const x=i%N,y=i/N|0;if((x==0||y==0||x==N-1||y==N-1)&&!locked(i))e.push(i)}const i=e[(Math.random()*e.length)|0];if(i!=null)tap(i);busy=true;try{await ensure()}finally{busy=false;sel=null;draw()}}
-function tick(){if(!on||!ready())return;const mv=pick();if(!mv){stuck();return}sel=null;tap(mv[0]);tap(mv[1]);moves++;label()}
+function tick(){if(!on||!ready())return;if(window.QABrain&&QABrain.on&&!GT){const d=QABrain.decide();if(d&&d.cast!=null){castP(d.cast);moves++;label();return}if(d&&d.move){sel=null;tap(d.move[0]);tap(d.move[1]);moves++;label();return}}const mv=pick();if(!mv){stuck();return}sel=null;tap(mv[0]);tap(mv[1]);moves++;label()}
 function label(){btn.textContent='🤖 [DEBUG] Autoplay: '+(on?'ON · '+moves:'OFF');btn.classList.toggle('on',on)}
 function start(){if(on)return;on=true;timer=setInterval(tick,TICK);label()}
 function stop(){on=false;clearInterval(timer);timer=0;label()}
@@ -6757,9 +6762,13 @@ const ownUI=el=>!!(el&&el.closest&&el.closest('#debugTestingConsole,#dbgCog'));
 
 /* ===== VISUAL 1 · class / hidden flip storms: the same token toggling on a large element = screen flicker ===== */
 const flips=new Map(),BIGIDS=new Set(['bw','board','mid','v-battle','pcard','ecard','app','main','vxc','msb']);
-function watchFlips(){mo=new MutationObserver(list=>{const now=performance.now();
+function watchFlips(){mo=new MutationObserver(list=>{const now=performance.now(),first=new Map();
+ /* net change per element per batch: a class removed and re-added in the same task never reaches the screen, so it is not a flip */
  for(const m of list){const el=m.target;if(ownUI(el)||(el.classList&&el.classList.contains('g'))||(el.closest&&el.closest('#board .g')))continue;
-  let toks;if(m.attributeName=='hidden')toks=['[hidden]'];else{const old=new Set(String(m.oldValue||'').split(/\s+/).filter(Boolean)),cur=new Set(el.classList);toks=[];for(const t of old)if(!cur.has(t))toks.push(t);for(const t of cur)if(!old.has(t))toks.push(t)}
+  let f=first.get(el);if(!f)first.set(el,f={});if(!(m.attributeName in f))f[m.attributeName]=m.oldValue}
+ for(const[el,f]of first)for(const an in f){let toks;
+  if(an=='hidden'){if((f[an]!==null)===el.hasAttribute('hidden'))continue;toks=['[hidden]']}
+  else{const old=new Set(String(f[an]||'').split(/\s+/).filter(Boolean)),cur=new Set(el.classList);toks=[];for(const t of old)if(!cur.has(t))toks.push(t);for(const t of cur)if(!old.has(t))toks.push(t)}
   for(const t of toks){let r=flips.get(el);if(!r)flips.set(el,r={});const a=r[t]||(r[t]=[]);a.push(now);while(a.length&&now-a[0]>2000)a.shift();
    if(a.length>=8){const big=el===document.body||el===document.documentElement||BIGIDS.has(el.id)||area(el.getBoundingClientRect())>=VA()*.15;
     if(big)rep('flip:'+name(el)+t,'VISUAL','FLICKER: '+name(el)+' toggled "'+t+'" '+a.length+'× in 2 s (whole-area flashing)',10000);a.length=0}}}});
@@ -6790,21 +6799,27 @@ const rz=[];function onResize(){const now=Date.now();rz.push(now);while(rz.lengt
 function onCtxLost(e){rep('glost:'+name(e.target),'VISUAL','GPU context lost on '+name(e.target)+' (canvas will draw blank until restored)',5000)}
 
 /* ===== VISUAL 5 · layout: board covered, HUD overlapping the board, UI off-screen, animation budget ===== */
-const occ=new Map();
+const occ=new Map(),offN={};
 function layout(){if(document.hidden)return;
  try{const n=document.getAnimations?document.getAnimations().length:0;if(n>260)rep('anims','PERFORMANCE',n+' animations running at once (Android GPU budget risk: blanking / flicker)',30000)}catch(_){}
  let paused=false;try{paused=!!(PAUSED||sty)}catch(_){}if(!inBattle()||paused){occ.clear();return}const bw=document.getElementById('bw'),bd=document.getElementById('board');if(!bw||!bd)return;const R=bd.getBoundingClientRect();if(R.width<40)return;
  for(const[fx,fy]of[[.5,.5],[.2,.2],[.8,.8],[.2,.8],[.8,.2]]){const x=R.left+R.width*fx,y=R.top+R.height*fy;if(x<0||y<0||x>innerWidth||y>innerHeight)continue;const hit=document.elementFromPoint(x,y);
-  const pk=fx+','+fy,bad=hit&&!bw.contains(hit)&&!ownUI(hit)&&!hit.closest('.modal,#gl,#console,#tabs,#mgp,.toast,.fl,#tutorialOverlayPane,[role=dialog]');
-  if(!bad){occ.delete(pk);continue}const was=occ.get(pk);occ.set(pk,hit);if(was===hit)rep('cover:'+name(hit),'VISUAL','OCCLUDED: '+name(hit)+' is drawn on top of the board at '+Math.round(fx*100)+'%,'+Math.round(fy*100)+'%',15000)}
+  const pk=fx+','+fy,bad=hit&&!bw.contains(hit)&&!ownUI(hit)&&!hit.closest('.modal,#gl,#console,#tabs,#mgp,.toast,.fl,#tutorialOverlayPane,#dxpop,[role=dialog],[aria-live]');
+  if(!bad){occ.delete(pk);continue}const was=occ.get(pk);const c=was&&was.el===hit?was.n+1:1;occ.set(pk,{el:hit,n:c});if(c>=3)rep('cover:'+name(hit),'VISUAL','OCCLUDED: '+name(hit)+' is drawn on top of the board at '+Math.round(fx*100)+'%,'+Math.round(fy*100)+'%',15000)}
  for(const id of['pcard','ecard','msb']){const el=document.getElementById(id);if(!el||el.hidden||!el.offsetParent&&id!='msb')continue;const r=el.getBoundingClientRect();if(!r.width)continue;
   const ov=overlap(r,R);if(ov>R.width*6)rep('ovl:'+id,'VISUAL','OVERLAP: #'+id+' covers '+Math.round(ov/(R.width*R.height/49)*10)/10+' gem cells of the board',20000);
-  if(r.bottom>innerHeight+2||r.top<-2||r.right>innerWidth+2)rep('off:'+id,'VISUAL','OFF-SCREEN: #'+id+' extends past the viewport ('+Math.round(r.top)+'→'+Math.round(r.bottom)+' of '+innerHeight+'px)',30000)}}
+  if(r.bottom>innerHeight+2||r.top<-2||r.right>innerWidth+2){offN[id]=(offN[id]||0)+1}else offN[id]=0;if(offN[id]>=3)rep('off:'+id,'VISUAL','OFF-SCREEN: #'+id+' extends past the '+(r.bottom>innerHeight+2?'bottom':r.top<-2?'top':'right')+' edge (box '+Math.round(r.left)+','+Math.round(r.top)+' → '+Math.round(r.right)+','+Math.round(r.bottom)+' · viewport '+innerWidth+'×'+innerHeight+' · css w='+getComputedStyle(el).width+' l='+getComputedStyle(el).left+' r='+getComputedStyle(el).right+')',30000)}}
 
 /* ===== GAMEPLAY · board integrity, stat sanity, soft-locks ===== */
-let busySince=0,emptyHits=0,zeroSince=0;
+let busySince=0,emptyHits=0,zeroSince=0,sig='',sigT=0,negN=0;
 function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S||!S.hero)return;const now=Date.now();
- if(s.busy){if(!busySince)busySince=now;else if(now-busySince>12000&&!PAUSED)rep('soft','GAMEPLAY','SOFT-LOCK: board has been busy for '+Math.round((now-busySince)/1000)+' s (input blocked)',20000)}else busySince=0;
+ if(s.busy&&!PAUSED){const tb=document.getElementById('turnb'),g=s.B.join('')+'|'+Math.round(s.E?s.E.hp:0)+'|'+Math.round(s.P?s.P.hp:0)+'|'+(tb&&!tb.hidden?tb.textContent:'')+'|'+document.querySelectorAll('#board .g').length;
+  if(!busySince){busySince=now;sig=g;sigT=now}if(g!=sig){sig=g;sigT=now}
+  /* real soft-lock: input blocked AND nothing on the board, HP bars or turn banner has changed */
+  if(now-sigT>8000)rep('soft','GAMEPLAY','SOFT-LOCK: input blocked and the board has not changed for '+Math.round((now-sigT)/1000)+' s'+(tb&&!tb.hidden?' (banner: "'+tb.textContent+'")':''),20000);
+  /* slow but alive: long cascade / enemy extra-turn chains */
+  else if(now-busySince>15000)rep('slowturn','GAMEPLAY','SLOW TURN: input blocked for '+Math.round((now-busySince)/1000)+' s by a long cascade / enemy turn chain (game still progressing)',30000)}
+ else{busySince=0;sigT=0}
  if(!inBattle())return;
  if(!s.busy){const NN=s.N*s.N;let bad=-1,empty=0;if(s.B.length!=NN)rep('blen','GAMEPLAY','BOARD: array holds '+s.B.length+' cells, expected '+NN);
   for(let i=0;i<NN;i++){const v=s.B[i];if(v===-1)empty++;else if(typeof v!='number'||!Number.isInteger(v)||v<0){bad=i;break}}
@@ -6812,7 +6827,7 @@ function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S|
   if(empty){if(++emptyHits>=2)rep('bempty','GAMEPLAY','BOARD: '+empty+' empty cell'+(empty>1?'s':'')+' left after the cascade settled (holes in the grid)')}else emptyHits=0;
   if(vis('v-battle')){const dom=s.tiles.filter(t=>t&&t.isConnected).length;if(dom&&dom<NN)rep('tdom','VISUAL','MISSING GEMS: '+(NN-dom)+' tile element'+(NN-dom>1?'s are':' is')+' not on screen while the board is idle')}}
  const ph=s.P&&s.P.hp,mx=(()=>{try{return stat().hp}catch(_){return 0}})();
- if(!Number.isFinite(ph))rep('php','GAMEPLAY','STATS: hero HP is '+ph);else if(ph<0)rep('php','GAMEPLAY','STATS: hero HP below zero ('+ph+')');else if(mx&&ph>mx*1.5)rep('phx','GAMEPLAY','STATS: hero HP '+Math.round(ph)+' far above max '+Math.round(mx));
+ if(!Number.isFinite(ph))rep('php','GAMEPLAY','STATS: hero HP is '+ph);else if(ph<0&&!s.dead){if(++negN>=2)rep('php','GAMEPLAY','STATS: hero HP below zero ('+ph+') but the hero is not defeated')}else if(ph>=0)negN=0;if(Number.isFinite(ph)&&mx&&ph>mx*1.5)rep('phx','GAMEPLAY','STATS: hero HP '+Math.round(ph)+' far above max '+Math.round(mx));
  if(s.P&&Array.isArray(s.P.m)&&s.P.m.some(v=>!Number.isFinite(v)||v<0))rep('pm','GAMEPLAY','STATS: mana pool corrupt ['+s.P.m.join(',')+']');
  if(s.P&&!Number.isFinite(s.P.arm))rep('parm','GAMEPLAY','STATS: shield is '+s.P.arm);
  if(!Number.isFinite(S.gold)||S.gold<0)rep('gold','GAMEPLAY','ECONOMY: gold is '+S.gold);
@@ -6820,6 +6835,19 @@ function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S|
   if(s.E.hp<=0&&!s.E.dead&&!s.busy){if(!zeroSince)zeroSince=now;else if(now-zeroSince>3000)rep('ezero','GAMEPLAY','FIGHT STUCK: '+s.E.n+' at 0 HP for '+Math.round((now-zeroSince)/1000)+' s but the victory never fired')}else zeroSince=0}
  if(s.dead&&Number.isFinite(ph)&&ph>0)rep('ddead','GAMEPLAY','STATE: hero flagged dead with '+Math.round(ph)+' HP left')}
 
+/* ===== manual report: tap the moment you SEE a glitch the detectors can't (GPU compositor flicker is invisible to JS) ===== */
+let fps2=0;{let n=0,t0=performance.now();(function f(t){n++;if(t-t0>=1000){fps2=n*1000/(t-t0);n=0;t0=t}requestAnimationFrame(f)})(t0)}
+function audit(){const o={bd:0,wc:0,mb:0,fl:0,an:0,big:[]};const W=innerWidth,H=innerHeight;
+ for(const el of document.querySelectorAll('body *')){if(ownUI(el))continue;const r=el.getBoundingClientRect();if(!r.width||!r.height||r.bottom<0||r.top>H||r.right<0||r.left>W)continue;const cs=getComputedStyle(el);
+  if(cs.visibility=='hidden'||cs.display=='none')continue;const big=r.width*r.height>W*H*.3;
+  if(cs.backdropFilter&&cs.backdropFilter!='none'||cs.webkitBackdropFilter&&cs.webkitBackdropFilter!='none'){o.bd++;if(big)o.big.push(name(el)+'[backdrop]')}
+  if(cs.willChange&&cs.willChange!='auto'){o.wc++;if(big)o.big.push(name(el)+'[will-change]')}
+  if(cs.mixBlendMode&&cs.mixBlendMode!='normal'){o.mb++;if(big)o.big.push(name(el)+'[blend:'+cs.mixBlendMode+']')}
+  if(cs.filter&&cs.filter!='none')o.fl++}
+ try{o.an=document.getAnimations().length}catch(_){}return o}
+function flagNow(){const a=audit(),cvs=[...document.querySelectorAll('canvas')].filter(c=>c.isConnected&&c.getBoundingClientRect().width).map(c=>(c.id||'canvas')+' '+c.width+'×'+c.height),
+ fl=[];for(const[el,r]of flips)for(const k in r)if(r[k].length)fl.push(name(el)+':'+k+'×'+r[k].length);
+ L('VISUAL','👁 PLAYER-FLAGGED GLITCH · '+Math.round(fps2)+' fps · '+a.an+' animations · backdrop-blur '+a.bd+' · will-change '+a.wc+' · blend '+a.mb+' · filters '+a.fl+(a.big.length?' · full-screen layers: '+a.big.slice(0,6).join(', '):'')+' · canvases: '+(cvs.join(', ')||'none')+(fl.length?' · recent class flips: '+fl.slice(0,5).join(', '):'')+' · body: '+[...document.body.classList].join(' ')+' · '+ctx()+' · '+innerWidth+'×'+innerHeight+' @'+devicePixelRatio+'x')}
 function label(){if(btn){btn.textContent='🛰️ [DEBUG] Bug Monitor: '+(on?'ON · '+found:'OFF');btn.classList.toggle('on',on)}}
 function start(){if(on)return;on=true;try{localStorage.setItem('gg_bugmon','1')}catch(_){}
  watchFlips();fT=0;fWin=performance.now();raf=requestAnimationFrame(frame);
@@ -6830,12 +6858,561 @@ function stop(){if(!on)return;on=false;try{localStorage.removeItem('gg_bugmon')}
  if(mo){mo.disconnect();mo=null}cancelAnimationFrame(raf);ivs.forEach(clearInterval);ivs=[];flips.clear();lum.clear();
  removeEventListener('resize',onResize);if(window.visualViewport)visualViewport.removeEventListener('resize',onResize);document.removeEventListener('webglcontextlost',onCtxLost,true);document.removeEventListener('contextlost',onCtxLost,true);
  L('INFO','Bug Monitor OFF · '+found+' issue'+(found==1?'':'s')+' reported this session');label()}
+DebugBar.add('flagbtn','Tap the moment you see flicker or any glitch: logs a snapshot of frame rate, GPU-heavy layers, canvases and screen state',()=>{flagNow();const b=document.getElementById('flagbtn');b.textContent='⚡ Logged ✓';setTimeout(()=>{b.textContent='⚡ I SAW A GLITCH (flag it)'},1200)}).textContent='⚡ I SAW A GLITCH (flag it)';
 btn=DebugBar.add('bmbtn','Playtesting only: watches for screen flicker, flashing / blacked-out canvases, stutter, UI overlapping the board, broken board state, bad HP / mana / gold values and soft-locks, and files them in the Live Bug Tracker',()=>on?stop():start());label();
 /* QA Simulation brings the monitor with it */
 const Q=window.AutoplayEngine&&AutoplayEngine.QA;if(Q){const _s=Q.start;Q.start=function(){const r=_s.apply(this,arguments);start();return r};
  const b=document.getElementById('qabtn');if(b)b.onclick=e=>{e.stopPropagation();Q.on?Q.stop():Q.start()}}
 try{if(localStorage.getItem('gg_bugmon')=='1')start()}catch(_){}
-return{start,stop,toggle:()=>on?stop():start(),get on(){return on},get found(){return found}}})();
+return{start,stop,flag:flagNow,audit,toggle:()=>on?stop():start(),get on(){return on},get found(){return found}}})();
+
+/* =====================================================================
+   v5.8 QA RECORDER · Pass 1
+   - Persistent log: every logDebugIssue entry is kept in a separate IndexedDB ("GemgrindQA", never the game save),
+     plus a small localStorage mirror written synchronously so a killed tab still leaves its last lines behind.
+     A session that ended without a clean page exit is reported on the next launch.
+   - Breadcrumbs: last 40 player / bot actions (taps, swaps, skills, tabs, travel, wins, defeats).
+     Every VISUAL / GAMEPLAY / GLITCH / ERROR entry carries the 8 actions that led to it.
+   - Snapshots: on those issues and on ⚡ flag, a picture of the board (gem grid + the effects canvases over it)
+     and the full combat state are stored (last 15) for the export.
+   - Export: one JSON report with device info, both sessions, crumbs, snapshots, save summary and telemetry.
+   ===================================================================== */
+window.QARec=(()=>{const VER='5.9',KEEP=2500,MIRROR=60,SNAPS=15,CRUMBS=40,ISSUE=new Set(['ERROR','GLITCH','VISUAL','GAMEPLAY']);
+const now=()=>Date.now(),T0=now(),sid=String(T0);
+const sess={id:sid,v:VER,start:T0,end:0,clean:0,entries:[],snaps:[]};let prev=[],dirty=0,snapN=0;const crumbs=[];
+/* ---------- tiny IndexedDB key/value store, separate from the game save ---------- */
+const QDB=(()=>{let db=null,p=null;const open=()=>db?Promise.resolve(db):p||(p=new Promise((res,rej)=>{let r;try{r=indexedDB.open('GemgrindQA',1)}catch(e){rej(e);return}
+ r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>rej(r.error)}));
+ const op=(mode,fn)=>open().then(d=>new Promise(res=>{let tx;try{tx=d.transaction('kv',mode)}catch(e){res(null);return}const st=tx.objectStore('kv'),q=fn(st);tx.oncomplete=()=>res(q&&'result'in q?q.result:1);tx.onerror=tx.onabort=()=>res(null)})).catch(()=>null);
+ return{get:k=>op('readonly',s=>s.get(k)),set:(k,v)=>op('readwrite',s=>s.put(v,k))}})();
+/* ---------- mirror: last lines + clean flag, synchronous ---------- */
+let bg=0,closing=0;function mirror(clean){clean=clean||closing;try{localStorage.setItem('gg_qamirror',JSON.stringify({id:sid,v:VER,start:T0,end:now(),clean:clean?1:0,bg,tail:sess.entries.slice(-MIRROR),crumbs:crumbs.slice(-12)}))}catch(_){}}
+function flush(){if(!dirty)return;dirty=0;sess.end=now();QDB.set('cur',sess);mirror(0)}
+setInterval(flush,1500);
+const bye=()=>{closing=1;sess.end=now();sess.clean=1;mirror(1);QDB.set('cur',sess)};
+addEventListener('pagehide',bye);addEventListener('pageshow',e=>{if(e.persisted){closing=0;sess.clean=0;mirror(0)}});document.addEventListener('visibilitychange',()=>{bg=document.hidden?1:0;sess.bg=bg;sess.end=now();mirror(0);if(bg)QDB.set('cur',sess)});
+
+/* ---------- entry tap (called from logDebugIssue) ---------- */
+const hms=ms=>{const s=Math.floor(ms/1000),p=n=>String(n).padStart(2,'0');return p(Math.floor(s/3600))+':'+p(Math.floor(s/60)%60)+':'+p(s%60)};
+function tap(k,msg,t){const e={t,ts:now(),k,msg};if(ISSUE.has(k)){e.crumbs=crumbs.slice(-8).map(c=>c.a);if(!/^👁|📸/.test(msg)){const s=snap(k+': '+msg.slice(0,90));if(s)e.snap=s}}
+ sess.entries.push(e);if(sess.entries.length>KEEP)sess.entries.splice(0,sess.entries.length-KEEP);dirty=1;if(ISSUE.has(k))mirror(0);
+ try{window.QATele&&QATele.onLog&&QATele.onLog(e)}catch(_){}}
+window.__qaTap=tap;
+
+/* ---------- breadcrumbs ---------- */
+function crumb(a){crumbs.push({ts:now(),a:hms(now()-T0)+' '+a});if(crumbs.length>CRUMBS)crumbs.shift()}
+const who=()=>window.AutoplayEngine&&AutoplayEngine.on?'bot':'you';
+document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest('button,[role=button],[data-a],a,.hmp,g.nd');if(!el||el.closest('#debugTestingConsole,#dbgCog'))return;
+ let d;if(el.classList.contains('g')&&el._i!=null)d='gem ('+el._i%N+','+(el._i/N|0)+')';else d=(el.id?'#'+el.id+' ':'')+String(el.getAttribute('aria-label')||el.textContent||el.dataset.a||'').replace(/\s+/g,' ').trim().slice(0,30);
+ crumb('tap '+d)},true);
+const wrapG=(name,fmt)=>{try{const f=window[name]||eval(name);if(typeof f!='function')return;const w=function(){try{const s=fmt.apply(this,arguments);if(s)crumb(s)}catch(_){}return f.apply(this,arguments)};eval(name+'=w')}catch(_){}};
+wrapG('swap',(a,b)=>busy||sty||PAUSED?'':who()+' swapped ('+a%N+','+(a/N|0)+')↔('+b%N+','+(b/N|0)+')');
+wrapG('cast',(k,w)=>(w?'enemy':who())+' cast '+(k&&k[0]));
+wrapG('showTab',k=>'tab → '+k);
+wrapG('openCon',k=>'console → '+(k||'open'));
+wrapG('travelTo',i=>'travel → node '+i);
+wrapG('retryEncounter',()=>'retry encounter');
+wrapG('win',()=>E&&!E.dead&&!GT?'victory vs '+E.n:'');
+wrapG('die',()=>dead?'':'defeat vs '+(E?E.n:'?'));
+
+/* ---------- snapshot: board picture + combat state ---------- */
+function boardImg(){try{const bd=document.getElementById('board');if(!bd||!B||!B.length)return'';const R=bd.getBoundingClientRect(),cs=26,W=N*cs,c=document.createElement('canvas');c.width=W;c.height=W;const g=c.getContext('2d');
+ g.fillStyle='#1a1512';g.fillRect(0,0,W,W);
+ for(let i=0;i<N*N;i++){const x=(i%N)*cs,y=(i/N|0)*cs,v=B[i];g.strokeStyle='#2c241d';g.strokeRect(x+.5,y+.5,cs-1,cs-1);if(v<0)continue;
+  g.fillStyle=PCOL[v]||'#888';g.beginPath();g.arc(x+cs/2,y+cs/2,cs*.36,0,7);g.fill();
+  if(v==6){g.fillStyle='#111';g.font='bold 11px sans-serif';g.textAlign='center';g.fillText('☠',x+cs/2,y+cs/2+4)}
+  if(SP[i]){g.strokeStyle='#fff';g.lineWidth=2;g.beginPath();g.arc(x+cs/2,y+cs/2,cs*.45,0,7);g.stroke();g.lineWidth=1}
+  if(FZ[i]){g.fillStyle='rgba(160,230,255,.45)';g.fillRect(x+2,y+2,cs-4,cs-4)}
+  if(TR[i]){g.strokeStyle='#9be38a';g.strokeRect(x+3,y+3,cs-6,cs-6)}}
+ /* what the effects layers were painting over the board at that instant */
+ if(R.width>20)for(const cv of document.querySelectorAll('canvas#vxc,canvas#jxc')){if(!cv.width)continue;const CR=cv.getBoundingClientRect(),sx=cv.width/CR.width,sy=cv.height/CR.height;
+  try{g.drawImage(cv,(R.left-CR.left)*sx,(R.top-CR.top)*sy,R.width*sx,R.height*sy,0,0,W,W)}catch(_){}}
+ return c.toDataURL('image/png')}catch(_){return''}}
+function screenImg(){try{const W=120,H=Math.round(W*innerHeight/innerWidth),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,H);let any=0;
+ for(const cv of document.querySelectorAll('canvas')){const r=cv.getBoundingClientRect();if(!cv.width||r.width*r.height<innerWidth*innerHeight*.3)continue;try{g.drawImage(cv,r.left*W/innerWidth,r.top*H/innerHeight,r.width*W/innerWidth,r.height*H/innerHeight);any=1}catch(_){}}
+ return any?c.toDataURL('image/png'):''}catch(_){return''}}
+function state(){const o={tab:typeof curTab!='undefined'?curTab:'?',busy,sty,dead,paused:PAUSED,gather:!!GT,node:S.at,loc:S.loc,cls:S.cls};
+ try{const st=stat();o.hero={hp:Math.round(P.hp),max:Math.round(st.hp),shield:Math.round(P.arm),mana:P.m.slice(),st:Object.assign({},P.st)}}catch(_){}
+ try{if(E)o.enemy={n:E.n,hp:Math.round(E.hp),max:E.mx,shield:Math.round(E.arm||0),boss:!!E.boss,elite:!!E.elite,dead:!!E.dead,mana:E.m?E.m.slice():null,st:Object.assign({},E.st)}}catch(_){}
+ try{o.grid=[];for(let y=0;y<N;y++)o.grid.push(B.slice(y*N,y*N+N).map((v,x)=>{const i=y*N+x;return(v<0?'.':String(v))+(SP[i]?'*':'')+(FZ[i]?'f':'')}).join(' '))}catch(_){}
+ try{const tb=document.getElementById('turnb');if(tb&&!tb.hidden)o.banner=tb.textContent}catch(_){}
+ o.body=[...document.body.classList].join(' ');o.viewport=innerWidth+'×'+innerHeight+'@'+devicePixelRatio;return o}
+let lastSnapAt=0;
+function snap(why,force){const t=now();if(!force&&t-lastSnapAt<4000)return 0;lastSnapAt=t;
+ const s={n:++snapN,ts:t,t:hms(t-T0),why,state:state(),board:inBattle()?boardImg():'',screen:screenImg(),crumbs:crumbs.slice(-12).map(c=>c.a)};
+ sess.snaps.push(s);if(sess.snaps.length>SNAPS)sess.snaps.shift();dirty=1;return s.n}
+const inBattle=()=>{try{return curTab=='battle'&&!!E}catch(_){return false}};
+/* ⚡ flag always snapshots */
+if(window.BugMonitor){const f=BugMonitor.flag;BugMonitor.flag=function(){const n=snap('player flag',1);const r=f.apply(this,arguments);try{window.logDebugIssue('INFO','📸 Snapshot #'+n+' saved with the flag (board picture + combat state) · in the export')}catch(_){}return r};
+ const b=document.getElementById('flagbtn');if(b)b.onclick=e=>{e.stopPropagation();BugMonitor.flag();b.textContent='⚡ Logged + 📸';setTimeout(()=>{b.textContent='⚡ I SAW A GLITCH (flag it)'},1200)}}
+
+/* ---------- save summary + device info ---------- */
+function saveSum(){try{const c=C();return{hero:S.hero&&S.hero.name,cls:S.cls,lvl:c.l,xp:Math.round(c.x),passives:c.n.length,node:S.at,frontier:S.loc,done:!!S.done,diff:S.diff,gold:S.gold,shards:S.gs,essence:S.ess,inv:S.inv.length,equipped:Object.fromEntries(Object.entries(S.eq||{}).filter(([,v])=>v).map(([k,v])=>[k,v.n+' L'+v.l])),skills:Object.assign({},S.sk),research:Object.assign({},S.lab),opt:S.opt}}catch(e){return{err:e.message}}}
+function device(){const n=navigator,o={ua:n.userAgent,lang:n.language,cores:n.hardwareConcurrency,mem:n.deviceMemory,touch:n.maxTouchPoints,viewport:innerWidth+'×'+innerHeight,screen:screen.width+'×'+screen.height,dpr:devicePixelRatio,standalone:matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches};
+ try{const m=performance.memory;if(m)o.heapMB=Math.round(m.usedJSHeapSize/1048576)+'/'+Math.round(m.jsHeapSizeLimit/1048576)}catch(_){}
+ try{const gl=document.createElement('canvas').getContext('webgl'),x=gl&&gl.getExtension('WEBGL_debug_renderer_info');if(x)o.gpu=gl.getParameter(x.UNMASKED_RENDERER_WEBGL)}catch(_){}return o}
+
+/* ---------- export ---------- */
+function report(){flush();const tele=window.QATele?QATele.report():null;
+ return{format:'gemgrind-qa-report',version:VER,exported:new Date().toISOString(),device:device(),save:saveSum(),
+  summary:{sessionMin:+((now()-T0)/60000).toFixed(1),entries:sess.entries.length,issues:sess.entries.filter(e=>ISSUE.has(e.k)).length,byKind:sess.entries.reduce((a,e)=>(a[e.k]=(a[e.k]||0)+1,a),{}),snapshots:sess.snaps.length},
+  telemetry:tele,session:sess,breadcrumbs:crumbs.map(c=>c.a),previousSessions:prev}}
+async function exportReport(){const r=(window.QARec&&QARec.report||report)(),d=new Date(),p=n=>String(n).padStart(2,'0'),fn='gemgrind-qa-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+'.json',
+ blob=new Blob([JSON.stringify(r,null,1)],{type:'application/json'});let how='download';
+ try{const f=new File([blob],fn,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Gemgrind QA report'});how='share sheet'}else throw 0}
+ catch(e){if(e&&e.name=='AbortError')return;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+ try{window.logDebugIssue('INFO','💾 Exported '+fn+' via '+how+' ('+Math.round(blob.size/1024)+' KB · '+r.session.entries.length+' entries · '+r.session.snaps.length+' snapshots)')}catch(_){}return fn}
+{const h=document.querySelector('#dbgRh>span:last-child');if(h){const b=document.createElement('button');b.type='button';b.className='dbgmini';b.id='dbgExp';b.textContent='💾 Export';b.title='Save the full QA report (all sessions, breadcrumbs, snapshots, telemetry) as a file';
+ b.onclick=e=>{e.stopPropagation();exportReport()};h.prepend(b)}}
+
+/* ---------- restore: previous session + crash detection ---------- */
+(async()=>{let m=null;try{m=JSON.parse(localStorage.getItem('gg_qamirror')||'null')}catch(_){}
+ const old=await QDB.get('cur'),hist=(await QDB.get('hist'))||[];let last=old&&old.id!==sid?old:null;
+ if(m&&m.id!==sid){if(last&&m.id===last.id){last.clean=m.clean||last.clean;last.bg=m.bg;last.end=Math.max(last.end||0,m.end)}else if(!last)last={id:m.id,v:m.v,start:m.start,end:m.end,clean:m.clean,bg:m.bg,entries:m.tail||[],snaps:[],mirrorOnly:1}}
+ if(last){hist.unshift(last);while(hist.length>3)hist.pop();await QDB.set('hist',hist)}prev=hist;
+ await QDB.set('cur',sess);
+ if(!last)return;const dur=hms(Math.max(0,(last.end||last.start)-last.start)),iss=(last.entries||[]).filter(e=>ISSUE.has(e.k)).length,L=window.logDebugIssue;
+ /* show the previous session's last lines, dimmed, above this one */
+ const lg=document.getElementById('dbgLog');if(lg){const hd=document.createElement('div');hd.style.cssText='color:#8f7f6a;border-bottom:1px solid rgba(201,162,78,.35)';hd.textContent='— previous session · '+new Date(last.start).toLocaleString()+' · '+dur+' · '+(last.entries||[]).length+' entries, '+iss+' issues —';
+  const frag=document.createDocumentFragment();frag.append(hd);for(const e of(last.entries||[]).slice(-25)){const r=document.createElement('div');r.style.opacity='.55';r.textContent=e.t+'  '+e.k+': '+e.msg;frag.append(r)}
+  const end=document.createElement('div');end.style.cssText='color:#8f7f6a;border-bottom:1px solid rgba(201,162,78,.35)';end.textContent='— this session —';frag.append(end);const emp=lg.querySelector('.empty');if(emp)emp.remove();lg.prepend(frag)}
+ if(!last.clean){const le=(last.entries||[]).slice(-1)[0],lc=m&&m.id==last.id&&m.crumbs?m.crumbs.slice(-4).map(c=>c.a).join(' → '):'';
+  if(last.bg)L('WARNING','Previous session was closed while the game was in the background after '+dur+' (normal app switch / Android tab cleanup)');
+  else L('ERROR','PREVIOUS SESSION DID NOT EXIT CLEANLY while on screen (crash, freeze or forced reload) after '+dur+(le?' · last event: '+le.k+': '+le.msg.slice(0,120):'')+(lc?' · last actions: '+lc:''))}
+ else L('INFO','Previous session restored ('+dur+', '+iss+' issues) · included in 💾 Export')})();
+return{report,exportReport,snap:w=>snap(w||'manual',1),crumb,get crumbs(){return crumbs.map(c=>c.a)},get session(){return sess},get previous(){return prev},QDB}})();
+
+/* =====================================================================
+   v5.8 QA RECORDER · Pass 2 · telemetry (read-only: wraps game globals from the outside, never writes S)
+   - Per-fight stats: duration, player / enemy turns, damage dealt / taken, mana gained, skills, biggest hit taken.
+     One BALANCE line per fight; difficulty spikes, one-shots and over-long fights are flagged.
+   - Progress & economy: sampled every 30 s; a BALANCE summary every 5 min; a stall warning when the QA bot
+     makes no progress (no new node, level, research or gear) for 10 min.
+   - Rules checks: victory with no reward, skill cast that drove mana negative, damage / HP not finite,
+     save data that would not survive JSON (NaN / Infinity / functions), oversized save.
+   ===================================================================== */
+window.QATele=(()=>{const L=(k,m)=>{try{window.logDebugIssue(k,m)}catch(_){}};const now=()=>Date.now(),T0=now();
+const fights=[],nodes={},econ=[];let cur=null,fid=0;
+const rnd=v=>Math.round(v||0),sec=ms=>Math.round(ms/100)/10;
+const manaSum=()=>{try{return P.m.reduce((a,b)=>a+(+b||0),0)}catch(_){return 0}};
+const hpArm=()=>{try{return(+P.hp||0)+(+P.arm||0)}catch(_){return 0}};
+const wrap=(name,before,after)=>{try{const f=eval(name);if(typeof f!='function')return;const w=function(){let c;try{c=before&&before.apply(this,arguments)}catch(_){}const r=f.apply(this,arguments);
+ if(after){if(r&&typeof r.then=='function')return r.then(v=>{try{after(c,v)}catch(_){}return v});try{after(c,r)}catch(_){}}return r};eval(name+'=w')}catch(e){console.warn('[QATele] wrap '+name,e)}};
+
+/* ---------- fight lifecycle ---------- */
+function start(kind){if(cur)end('abandoned');if(GT||!E)return;let lvl=0;try{lvl=C().l}catch(_){}
+ cur={eh:E.hp,ph:hpArm(),id:++fid,t0:now(),kind,enemy:E.n,node:S.at,act:E.act,boss:!!E.boss,elite:!!E.elite,ehp:E.mx,lvl,cls:S.cls,pt:0,et:0,dealt:0,taken:0,maxHit:0,mana:0,skills:0,crits:0,res:null}}
+function end(res){if(!cur)return;poll();const f=cur;cur=null;f.res=res;f.ms=now()-f.t0;f.t0=undefined;fights.push(f);if(fights.length>300)fights.shift();
+ const key=f.node+'|'+f.enemy.replace(/^Elite /,''),n=nodes[f.node]||(nodes[f.node]={node:f.node,w:0,l:0,a:0,names:{}});n.names[f.enemy]=1;
+ if(res=='win')n.w++;else if(res=='loss')n.l++;else n.a++;
+ if(res=='abandoned')return;
+ const tag=(f.boss?' 👑guardian':f.elite&&!/^Elite /.test(f.enemy)?' elite':'');
+ L('BALANCE','⚔ Fight #'+f.id+' '+(res=='win'?'WIN':'LOSS')+' vs '+f.enemy+tag+' (node '+f.node+', Lv '+f.lvl+' '+f.cls+') in '+sec(f.ms)+' s · turns '+f.pt+' you / '+f.et+' enemy · dealt '+rnd(f.dealt)+' · took '+rnd(f.taken)+' (worst hit '+rnd(f.maxHit)+') · mana +'+rnd(f.mana)+' · skills '+f.skills);
+ /* balance flags */
+ const tries=n.w+n.l;if(res=='loss'&&n.l>=2&&n.w/tries<.34)L('BALANCE','📉 DIFFICULTY SPIKE at node '+f.node+' ('+Object.keys(n.names).join(' / ')+'): '+n.w+' wins / '+n.l+' losses · hero Lv '+f.lvl);
+ if(res=='loss'&&f.pt<=3)L('BALANCE','💀 Fast defeat: lost to '+f.enemy+' in '+f.pt+' player turns (enemy HP '+f.ehp+' vs hero Lv '+f.lvl+')');
+ const done=fights.filter(x=>x.res=='win'&&!x.boss).slice(-12).map(x=>x.ms).sort((a,b)=>a-b);
+ if(done.length>=6&&!f.boss){const med=done[done.length>>1];if(f.ms>med*3&&f.ms>45000)L('BALANCE','🐢 Long fight: '+sec(f.ms)+' s vs a '+sec(med)+' s median ('+f.enemy+')')}}
+wrap('newEnemy',null,()=>start('new'));
+wrap('retryEncounter',null,()=>start('retry'));
+wrap('win',()=>({was:!!(E&&E.dead),gt:!!GT,sig:sig()}),c=>{if(c.was||c.gt||!E||!E.dead)return;end('win');
+ /* rule: a victory must pay out something */
+ const s0=c.sig;setTimeout(()=>{const s1=sig();if(s0===s1)L('GAMEPLAY','RULE: victory granted no reward (gold, XP, spoils and loot unchanged) · '+(E?E.n:''))},1500)});
+wrap('die',()=>({was:dead}),c=>{if(!c.was&&dead)end('loss')});
+/* turns, damage, mana */
+wrap('swap',()=>!(busy||sty||PAUSED),ok=>{if(ok&&cur)cur.pt++});
+wrap('foe',()=>{if(cur)cur.et++});
+wrap('hit',null,(c,d)=>{if(!Number.isFinite(d)){L('GAMEPLAY','RULE: hit() returned '+d+' damage');return}try{if(E&&!Number.isFinite(E.hp))L('GAMEPLAY','RULE: enemy HP became '+E.hp+' after a hit')}catch(_){}});
+wrap('pdmg',()=>hpArm(),(b,_)=>{const a=hpArm(),lost=b-a;if(cur&&lost>0){if(lost>cur.maxHit)cur.maxHit=lost;
+  try{const mx=stat().hp;if(lost>mx*.6&&lsOK('oneshot',20000))L('BALANCE','💥 Huge hit: '+rnd(lost)+' damage in one blow ('+Math.round(lost/mx*100)+'% of max HP) from '+(E?E.n:'?'))}catch(_){}}});
+wrap('resolve',who=>who?null:manaSum(),(b,_)=>{if(b==null||!cur)return;const g=manaSum()-b;if(g>0)cur.mana+=g});
+wrap('cast',(k,who)=>who?null:k,k=>{if(!k)return;if(cur)cur.skills++;try{if(P.m.some(v=>v<0))L('GAMEPLAY','RULE: casting '+k[0]+' left mana negative ['+P.m.join(',')+'] (cast allowed without enough mana)')}catch(_){}});
+/* damage totals from the HP bars themselves, so skulls, burns, poison, skills and reflects all count */
+function poll(){if(!cur||!E)return;const e=Math.max(0,+E.hp||0),h=hpArm();if(e<cur.eh)cur.dealt+=cur.eh-e;cur.eh=e;if(h<cur.ph&&!dead)cur.taken+=cur.ph-h;else if(h<cur.ph)cur.taken+=cur.ph-Math.max(0,h);cur.ph=h}
+setInterval(poll,100);
+const lsT={};function lsOK(k,ms){const t=now();if((lsT[k]||0)>t)return false;lsT[k]=t+ms;return true}
+function sig(){try{const c=C();return[S.gold,S.gs,S.ess,c.x,c.l,S.inv.length,JSON.stringify(S.mat),S.ms&&S.ms.tl,S.ms&&S.ms.sp,JSON.stringify(S.pouch&&S.pouch.inventory&&S.pouch.inventory.length)].join('|')}catch(_){return String(Math.random())}}
+
+/* ---------- progress & economy ---------- */
+function sample(){if(!S||!S.hero)return;let c={};try{c=C()}catch(_){}
+ let mat=0;try{for(const k in S.mat)mat+=S.mat[k].reduce((a,b)=>a+b,0)}catch(_){}
+ let lab=0;try{for(const k in S.lab)lab+=S.lab[k]|0}catch(_){}
+ let gear=0;try{for(const k in S.eq)if(S.eq[k])gear+=S.eq[k].l*(1+(S.eq[k].r||0))}catch(_){}
+ econ.push({ts:now(),gold:S.gold,shards:S.gs,ess:S.ess,lvl:c.l,xp:c.x,loc:S.loc,mat,lab,gear,inv:S.inv.length,wins:fights.filter(f=>f.res=='win').length,losses:fights.filter(f=>f.res=='loss').length});
+ if(econ.length>400)econ.shift();progress()}
+let lastLog=now(),lastProg=now(),lastSig='';
+function progress(){const a=econ[econ.length-1];if(!a)return;const s=[a.loc,a.lvl,a.lab,a.gear].join('|');if(s!==lastSig){lastSig=s;lastProg=a.ts}
+ const qa=window.AutoplayEngine&&AutoplayEngine.QA&&AutoplayEngine.QA.on;
+ if(qa&&a.ts-lastProg>600000&&lsOK('stall',600000))L('BALANCE','⛔ PROGRESS STALL: no new node, level, research or gear upgrade for '+Math.round((a.ts-lastProg)/60000)+' min (node '+a.loc+', Lv '+a.lvl+', '+a.wins+' wins / '+a.losses+' losses so far)');
+ if(a.ts-lastLog>=300000){const b=econ.find(e=>e.ts>=a.ts-300000)||econ[0],m=(a.ts-b.ts)/60000||1;lastLog=a.ts;
+  L('BALANCE','📈 Last '+m.toFixed(0)+' min: gold '+(a.gold-b.gold>=0?'+':'')+rnd((a.gold-b.gold)/m)+'/min · XP lvl '+b.lvl+'→'+a.lvl+' · frontier node '+b.loc+'→'+a.loc+' · shards +'+rnd(a.shards-b.shards)+' · materials +'+(a.mat-b.mat)+' · research +'+(a.lab-b.lab)+' · fights '+(a.wins-b.wins)+'W/'+(a.losses-b.losses)+'L')}}
+setInterval(sample,30000);setTimeout(sample,3000);
+
+/* ---------- save integrity ---------- */
+function scan(o,path,out,seen,d){if(out.length>=6||d>12)return;if(o===null)return;const t=typeof o;
+ if(t=='number'){if(!Number.isFinite(o))out.push(path+' = '+o);return}if(t=='function'){out.push(path+' is a function');return}if(t!='object')return;
+ if(seen.has(o)){out.push(path+' is a circular reference');return}seen.add(o);
+ if(Array.isArray(o)){for(let i=0;i<o.length;i++)scan(o[i],path+'['+i+']',out,seen,d+1)}
+ else for(const k in o)scan(o[k],path+'.'+k,out,seen,d+1);seen.delete(o)}
+function saveCheck(){if(!S||!S.hero)return;const out=[];try{scan(S,'S',out,new Set,0)}catch(e){out.push('scan failed: '+e.message)}
+ if(out.length&&lsOK('save:'+out[0],600000))L('GAMEPLAY','SAVE INTEGRITY: '+out.join(' · ')+' (would not survive a save/reload)');
+ try{const raw=JSON.stringify(S),kb=raw.length/1024;if(kb>3500&&lsOK('savesz',1800000))L('WARNING','Save is '+Math.round(kb)+' KB: close to the browser storage limit');
+  const back=JSON.parse(raw);for(const k of['gold','loc','at','cls','gs'])if(JSON.stringify(back[k])!==JSON.stringify(S[k])&&lsOK('rt'+k,600000))L('GAMEPLAY','SAVE ROUND-TRIP: S.'+k+' changed after save/reload ('+S[k]+' → '+back[k]+')')}catch(e){L('ERROR','SAVE ROUND-TRIP failed: '+e.message)}}
+setInterval(saveCheck,120000);setTimeout(saveCheck,8000);
+
+function report(){const W=fights.filter(f=>f.res=='win'),Lo=fights.filter(f=>f.res=='loss'),avg=(a,k)=>a.length?Math.round(a.reduce((s,f)=>s+f[k],0)/a.length):0;
+ return{fights:fights.slice(-200),summary:{fights:W.length+Lo.length,wins:W.length,losses:Lo.length,winRate:W.length+Lo.length?Math.round(W.length/(W.length+Lo.length)*100)+'%':'—',avgFightSec:sec(avg(fights.filter(f=>f.res!='abandoned'),'ms')),avgTurns:avg(W,'pt'),avgDealt:avg(W,'dealt'),avgTaken:avg(fights.filter(f=>f.res!='abandoned'),'taken')},
+  nodes:Object.values(nodes).sort((a,b)=>a.node-b.node).map(n=>({node:n.node,wins:n.w,losses:n.l,abandoned:n.a,enemies:Object.keys(n.names)})),economy:econ.slice(-240),current:cur}}
+return{report,sample,saveCheck,get fights(){return fights},get current(){return cur},get nodes(){return nodes}}})();
+
+/* =====================================================================
+   v5.8 QA RECORDER · Pass 3 · stress + speed + summary
+   - 🐒 Chaos Test (60 s): random taps on safe buttons, gems, tabs, console pages, Escape, scrolling and
+     simulated rotate / resize while every monitor watches. Destructive buttons are never pressed, the save is
+     backed up first, and QA Simulation is paused for the run.
+   - ⏱ QA Speed ×1 / ×2 / ×4: shortens every combat wait and drives the bots faster. Not saved; resets on reload.
+   - 🌍 Warp: jump the hero to any continent (optionally set the class level). Backs the save up first;
+     ↩ Restore puts the pre-test save back.
+   - 📊 Summary: session card (also shown when QA Simulation stops) and written to the log / export.
+   ===================================================================== */
+window.QATools=(()=>{const L=(k,m)=>{try{window.logDebugIssue(k,m)}catch(_){}};const now=()=>Date.now(),T0=now();
+const con=document.getElementById('debugTestingConsole'),vis=id=>{const e=document.getElementById(id);return!!e&&!e.hidden};
+const crumb=a=>{try{QARec.crumb(a)}catch(_){}};
+{const st=document.createElement('style');st.textContent='#dbgL{overflow-y:auto;overscroll-behavior:contain}#chbtn{order:7}#ffbtn{order:8}#wpbtn{order:9}#rsbtn{order:10}#smbtn{order:11;grid-column:1/-1}'
+ +'#qaSum{position:absolute;inset:6px;z-index:3;display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid rgba(201,162,78,.6);border-radius:7px;background:rgba(10,8,6,.97);overflow:auto}'
+ +'#qaSum h4{margin:0;color:#e9c88c;font:700 12px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.6px;text-transform:uppercase}#qaSum table{border-collapse:collapse;width:100%}#qaSum td{padding:2px 4px;border-bottom:1px dotted rgba(201,162,78,.15);vertical-align:top}#qaSum td:first-child{color:#8f7f6a;white-space:nowrap}#qaSum ol{margin:0;padding-left:18px}';document.head.append(st)}
+
+/* ---------- save backup / restore ---------- */
+let bkThis=0;function backup(why){try{const o=JSON.parse(localStorage.getItem('gg_qabackup')||'null');if(bkThis&&o&&o.ts===bkThis){L('INFO','🗄 Keeping the earlier backup from this session ('+o.why+') so ↩ Restore still undoes everything');return 1}}catch(_){}try{bkThis=now();localStorage.setItem('gg_qabackup',JSON.stringify({ts:bkThis,why,S}));L('INFO','🗄 Save backed up before '+why+' (↩ Restore puts it back)');return 1}catch(e){L('WARNING','Save backup failed: '+e.message);return 0}}
+function restore(){let b=null;try{b=JSON.parse(localStorage.getItem('gg_qabackup')||'null')}catch(_){}if(!b||!b.S){L('WARNING','No QA save backup to restore');return}
+ if(!confirm('Restore the save from '+new Date(b.ts).toLocaleString()+' (before '+b.why+')? Progress since then is lost.'))return;
+ try{localStorage.removeItem('gg_qabackup');bkThis=0;if(window.AutoplayEngine&&AutoplayEngine.QA)AutoplayEngine.QA.stop();chaosStop();for(const k of Object.keys(S))delete S[k];Object.assign(S,b.S);try{migrate()}catch(_){}save();L('INFO','↩ Save restored from backup · reloading');
+  let done=0;const go=()=>{if(done++)return;location.reload()};addEventListener('ggdb:saved',go,{once:true});setTimeout(go,2500)}catch(e){L('ERROR','Restore failed: '+e.message)}}
+
+/* ---------- ⏱ speed ---------- */
+let ff=1,ffT=0;window.QAFF=1;
+function setFF(v){ff=v;window.QAFF=v;clearInterval(ffT);ffT=0;
+ /* extra bot ticks: both bots guard themselves, so an extra tick when they are not ready does nothing */
+ if(v>1)ffT=setInterval(()=>{try{if(AutoplayEngine.on)AutoplayEngine.tick();const Q=AutoplayEngine.QA;if(Q&&Q.on)Q.tick()}catch(_){}},Math.round(1500/v));
+ ffB.textContent='⏱ [DEBUG] QA Speed: ×'+v;ffB.classList.toggle('on',v>1);L('INFO','⏱ QA speed ×'+v+(v>1?' · combat waits ÷'+v+', bots tick every '+Math.round(1500/v)+' ms':''))}
+const ffB=DebugBar.add('ffbtn','Playtesting only: speeds up combat waits and the bots (×1 → ×2 → ×4). Resets on reload.',()=>setFF(ff==1?2:ff==2?4:1));ffB.textContent='⏱ [DEBUG] QA Speed: ×1';
+
+/* ---------- 🌍 warp ---------- */
+DebugBar.add('wpbtn','Playtesting only: jump to any continent and optionally set your class level. Your save is backed up first.',()=>{
+ const tot=typeof TOTAL!='undefined'?TOTAL:1050,NC=Math.ceil(tot/21),c0=((S.at/21)|0)+1;
+ const a=prompt('Warp to continent 1-'+NC+' (you are on '+c0+').\nOptionally add a class level, e.g. "12" or "12 40":',String(Math.min(NC,c0+1)));if(a==null)return;
+ const[cS,lS]=a.trim().split(/[\s,]+/),c=Math.max(1,Math.min(NC,parseInt(cS,10)||0)),lv=parseInt(lS,10);if(!c)return;
+ if(!confirm('Warp to continent '+c+(lv>0?' and set '+S.cls+' to Lv '+lv:'')+'? This changes your save (a backup is taken first).'))return;
+ if(!backup('warp to continent '+c))return;
+ try{if(typeof GT!='undefined'&&GT&&typeof stopGather=='function')stopGather();if(typeof abortCombat=='function')abortCombat();
+  const i=Math.min(tot-1,(c-1)*21);S.loc=Math.max(S.loc,i);S.at=i;S.cm=1;S.done=0;S.k=0;
+  if(lv>0){const cc=C();cc.l=Math.max(1,Math.min(999,lv));cc.x=0}
+  if(typeof mapC!='undefined')mapC=c-1;dead=false;sty=false;$('gl').hidden=true;newEnemy();heal();save();showTab('battle');draw();
+  crumb('warp → continent '+c+(lv>0?' Lv '+lv:''));L('QA','🌍 Warped to continent '+c+' (node '+i+')'+(lv>0?' · '+S.cls+' set to Lv '+lv:'')+' · first foe: '+(E?E.n:'?'))}catch(e){L('ERROR','Warp failed: '+e.message)}}).textContent='🌍 [DEBUG] Warp to continent';
+DebugBar.add('rsbtn','Restore the save backed up before the last warp or chaos test',restore).textContent='↩ [DEBUG] Restore pre-test save';
+
+/* ---------- 🐒 chaos test ---------- */
+const DANGER=/⛶|full ?screen|install|delete|reset|new game|wipe|erase|sell|salvage|scrap|retire|abandon|respec|refund|import|export|ng\+|new game\+|return to standard|main menu|quit|restore|warp|sign|log ?out|clear|forget|discard|dismantle|descend|confirm/i;
+let ch=0,chT=0,chEnd=0,chN=0,chB=null,chPrev=null;const chLog={};
+const okBtn=b=>{if(!b||b.disabled||b.closest('#debugTestingConsole,#dbgCog,a[href]')||b.matches('input[type=file]'))return false;const r=b.getBoundingClientRect();if(r.width<4||r.height<4||r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)return false;
+ const tx=(b.getAttribute('aria-label')||'')+' '+(b.textContent||'')+' '+(b.title||'')+' '+(b.dataset&&b.dataset.a||'');if(DANGER.test(tx))return false;
+ const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return!!hit&&(hit===b||b.contains(hit))};
+const pick=a=>a[(Math.random()*a.length)|0];
+function chaosStep(){if(!ch)return;if(now()>chEnd){chaosStop();return}
+ try{if(vis('create')||vis('menu')){const k=document.querySelector('#menu [data-r=continue],#menu button');if(k&&!DANGER.test(k.textContent)){k.click()}else{try{GG40.homeHide()}catch(_){}showTab('battle')}return}}catch(_){}
+ const r=Math.random();let d='';
+ try{
+  if(r<.45){const bs=[...document.querySelectorAll('button,[role=button],.hmp,[data-a]')].filter(okBtn);const b=pick(bs);if(b){d='click '+((b.id?'#'+b.id+' ':'')+String(b.getAttribute('aria-label')||b.textContent||b.dataset.a||'').replace(/\s+/g,' ').trim()).slice(0,34);b.click()}}
+  else if(r<.62){if(curTab=='battle'&&typeof tap=='function'&&!busy){const i=(Math.random()*N*N)|0;d='tap gem '+i;tap(i)}}
+  else if(r<.72){const k=pick(['battle','map','battle','map']);d='tab '+k;showTab(k)}
+  else if(r<.80){const tabs=typeof CONT!='undefined'?CONT.map(x=>x[0]):['hero'];const k=pick(tabs);d='console '+k;try{openCon(k)}catch(_){}}
+  else if(r<.86){d='Escape';document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));try{if(conOpen)closeCon()}catch(_){}}
+  else if(r<.93){const sc=[...document.querySelectorAll('*')].filter(e=>e.scrollHeight>e.clientHeight+20&&getComputedStyle(e).overflowY!='visible'&&!e.closest('#debugTestingConsole'));const e=pick(sc);if(e){e.scrollTop=Math.random()*e.scrollHeight;d='scroll '+(e.id||e.className||e.tagName).toString().slice(0,20)}}
+  else{d=Math.random()<.5?'rotate/resize event':'visibility flicker';if(d[0]=='r'){dispatchEvent(new Event('resize'));try{if(window.visualViewport)visualViewport.dispatchEvent(new Event('resize'))}catch(_){}dispatchEvent(new Event('orientationchange'))}
+   else{document.dispatchEvent(new Event('visibilitychange'))}}
+ }catch(e){L('ERROR','CHAOS: action "'+d+'" threw '+e.message)}
+ if(d){chN++;chLog[d.split(' ')[0]]=(chLog[d.split(' ')[0]]||0)+1;crumb('chaos '+d);chLbl()}}
+function chLbl(){if(chB){chB.textContent='🐒 [DEBUG] Chaos Test: '+(ch?'ON · '+chN+' · '+Math.max(0,Math.ceil((chEnd-now())/1000))+'s':'OFF');chB.classList.toggle('on',!!ch)}}
+function chaosStart(sec){if(ch)return;if(!S.hero){L('WARNING','Chaos Test needs a hero');return}backup('chaos test');
+ ch=1;const Q=window.AutoplayEngine&&AutoplayEngine.QA;chPrev={qa:!!(Q&&Q.on)};if(Q&&Q.on)Q.stop();try{if(AutoplayEngine.on)AutoplayEngine.stop()}catch(_){}
+ try{if(window.BugMonitor&&!BugMonitor.on)BugMonitor.start()}catch(_){}
+ ch=1;chN=0;for(const k in chLog)delete chLog[k];chEnd=now()+(sec||60)*1000;chT=setInterval(chaosStep,350);L('QA','🐒 Chaos Test ON for '+(sec||60)+' s · destructive buttons are skipped, QA Simulation paused, save backed up');chLbl()}
+function chaosStop(){if(!ch)return;ch=0;clearInterval(chT);chT=0;
+ L('QA','🐒 Chaos Test finished · '+chN+' random actions ('+Object.entries(chLog).map(([k,v])=>k+' '+v).join(', ')+') · check VISUAL / GAMEPLAY / ERROR lines above');chLbl();
+ try{if(conOpen)closeCon();document.getElementById('gl').hidden||0;if(curTab!='battle')showTab('battle')}catch(_){}
+ if(chPrev&&chPrev.qa)setTimeout(()=>{try{AutoplayEngine.QA.start()}catch(_){}},800);chPrev=null}
+chB=DebugBar.add('chbtn','Playtesting only: 60 s of random taps, tab switches, menus, scrolling and rotate events to shake out UI bugs. Skips destructive buttons and backs up your save first.',()=>ch?chaosStop():chaosStart(60));chLbl();
+setInterval(()=>{if(ch)chLbl()},1000);
+
+/* ---------- per-screen frame rate (for the summary) ---------- */
+const fpsTab={};{let n=0,t0=performance.now();(function f(t){n++;if(t-t0>=1000){if(!document.hidden){let k='?';try{k=conOpen?'console:'+curTab:curTab}catch(_){}const a=fpsTab[k]||(fpsTab[k]={s:0,n:0,min:999});const v=n*1000/(t-t0);a.s+=v;a.n++;if(v<a.min)a.min=v}n=0;t0=t}requestAnimationFrame(f)})(t0)}
+
+/* ---------- 📊 summary ---------- */
+function summary(){const s=QARec.session,iss=s.entries.filter(e=>/ERROR|GLITCH|VISUAL|GAMEPLAY/.test(e.k)),by={};
+ for(const e of s.entries)by[e.k]=(by[e.k]||0)+1;
+ const top={};for(const e of iss){const k=e.k+': '+e.msg.replace(/ · tab=.*$/,'').replace(/\(\+\d+ repeats\)/,'').replace(/\d+(\.\d+)?/g,'#').slice(0,70);top[k]=(top[k]||0)+1}
+ const T=window.QATele?QATele.report():{summary:{},nodes:[]},fs=T.summary||{};
+ const scr=Object.entries(fpsTab).filter(([,a])=>a.n>=3).map(([k,a])=>[k,a.s/a.n,a.min]).sort((a,b)=>a[1]-b[1]);
+ const spikes=(T.nodes||[]).filter(n=>n.losses>=2&&n.wins/(n.wins+n.losses)<.34);
+ return{min:((now()-T0)/60000).toFixed(1),fs,by,top:Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,6),scr:scr.slice(0,4),spikes,snaps:s.snaps.length}}
+function showSummary(){const m=summary(),fs=m.fs;let el=document.getElementById('qaSum');if(el)el.remove();el=document.createElement('div');el.id='qaSum';
+ const row=(a,b)=>'<tr><td>'+a+'</td><td>'+b+'</td></tr>';const esc2=x=>String(x).replace(/[<&>]/g,c=>({'<':'&lt;','&':'&amp;','>':'&gt;'}[c]));
+ el.innerHTML='<h4>📊 Session summary</h4><table>'+row('Duration',m.min+' min')+row('Fights',(fs.fights||0)+' · '+(fs.wins||0)+'W / '+(fs.losses||0)+'L · win rate '+(fs.winRate||'—'))+row('Avg fight',(fs.avgFightSec||0)+' s · '+(fs.avgTurns||0)+' turns · dealt '+(fs.avgDealt||0)+' · took '+(fs.avgTaken||0))
+  +(window.QABrain?row('Smart bot',(()=>{const b=QABrain.stats,c=Object.entries(b.casts);return(QABrain.on?'ON':'OFF')+' · '+c.reduce((a,[,v])=>a+v,0)+' casts ('+(c.map(([k,v])=>esc2(k)+' '+v).join(', ')||'none')+') · '+b.bigMatches+' 4+ matches · '+b.extraTurns+' extra turns · '+b.specials+' special combos'})()):'')+row('Log',Object.entries(m.by).map(([k,v])=>k+' '+v).join(' · ')||'—')+row('Snapshots',m.snaps)+row('Difficulty spikes',m.spikes.map(n=>'node '+n.node+' ('+n.wins+'W/'+n.losses+'L)').join(', ')||'none')
+  +row('Slowest screens',m.scr.map(([k,a,mn])=>esc2(k)+' '+Math.round(a)+' fps (min '+Math.round(mn)+')').join('<br>')||'—')+'</table>'
+  +'<div class="dbgsec">Top issues</div>'+(m.top.length?'<ol>'+m.top.map(([k,v])=>'<li>'+esc2(k)+' <b>×'+v+'</b></li>').join('')+'</ol>':'<div>No issues 🎉</div>')
+  +'<div style="display:flex;gap:6px;justify-content:flex-end"><button type="button" class="dbgmini" id="qaSumX">💾 Export</button><button type="button" class="dbgmini" id="qaSumC">Close</button></div>';
+ con.append(el);el.querySelector('#qaSumC').onclick=e=>{e.stopPropagation();el.remove()};el.querySelector('#qaSumX').onclick=e=>{e.stopPropagation();QARec.exportReport()};
+ L('INFO','📊 Summary · '+m.min+' min · '+(fs.fights||0)+' fights ('+(fs.winRate||'—')+' wins, avg '+(fs.avgFightSec||0)+' s) · '+Object.entries(m.by).filter(([k])=>/ERROR|GLITCH|VISUAL|GAMEPLAY|BALANCE/.test(k)).map(([k,v])=>k+' '+v).join(', ')+(m.spikes.length?' · spikes at node '+m.spikes.map(n=>n.node).join(','):'')+(m.scr.length?' · slowest screen '+m.scr[0][0]+' '+Math.round(m.scr[0][1])+' fps':''));return m}
+DebugBar.add('smbtn','Show the session summary card (also opens automatically when QA Simulation stops)',()=>{DebugBar.open();showSummary()}).textContent='📊 [DEBUG] Session summary';
+{const Q=window.AutoplayEngine&&AutoplayEngine.QA;if(Q){const _s=Q.stop;Q.stop=function(){const was=Q.on,r=_s.apply(this,arguments);if(was&&!ch)setTimeout(()=>{DebugBar.open();showSummary()},300);return r};
+ const b=document.getElementById('qabtn');if(b)b.onclick=e=>{e.stopPropagation();Q.on?Q.stop():Q.start()}}}
+return{chaosStart,chaosStop,setFF,summary,showSummary,backup,restore,get chaos(){return!!ch},get speed(){return ff}}})();
+
+/* =====================================================================
+   v5.9 ⚖️ DEBUG BALANCE TAB · per-difficulty damage multipliers (debug only, remove with the rest of this block)
+   - One slider per damage source, 1-100. 50 = today's value (×1.00); each step = 1% (1 → ×0.51, 100 → ×1.50).
+   - Five independent profiles, one per difficulty. Only the profile of the difficulty you are playing is live.
+   - Sliders edit a draft; 💾 Save & apply writes localStorage 'gg_dbal' (never the game save) and goes live at once.
+   - 📸 Snapshot copies every non-50 value with its multiplier and the code hook it maps to (BX key), so the tuned
+     numbers can be baked into the formulas; then this block and the bx-hooks script can be deleted.
+   ===================================================================== */
+window.DBAL=(()=>{const KEY='gg_dbal',ND=DIFF.length;
+const GEM=['Ruby','Topaz','Emerald','Sapphire','Amethyst','Amber','Skull'];
+const mult=v=>1+((v==null?50:v)-50)/100,fx=x=>(Math.round(x*100)/100).toFixed(2);
+const cost=o=>Object.entries(o).map(([c,n])=>n+' '+GEM[c]).join(' + ');
+/* ---------- catalog of every damage source ---------- */
+const G=[];const add=(g,key,label,base,unit,tip)=>{let grp=G.find(x=>x.n==g);if(!grp)G.push(grp={n:g,items:[]});grp.items.push({key,label,base,unit,tip})};
+add('🌐 Global','all_p','All damage YOU deal',1,'×','Master multiplier on every hit you land (skills, skulls, resonances, keystones, traps). Stacks with every slider below. Damage-over-time ticks are not included; they have their own sliders.');
+add('🌐 Global','all_e','All damage ENEMIES deal',1,'×','Master multiplier on every hit that reaches your hero (skulls, enemy skills, board wipes). Applied before your shield and dodge. Burn ticks and Thorns affix have their own sliders.');
+add('💀 Board attacks (you)','skull_p','Skull matches',.8,'× Attack per skull','Matching skulls hits the enemy for 0.8× your Attack per skull × combo. Also affected by skull-damage gear, Elemental Splash and difficulty skull rules. Enemy block chance is unchanged.');
+add('💀 Board attacks (you)','wipe_p','Board Wipe combo',.25,'× Attack per gem','Two special gems combined into a Board Wipe: 0.25× Attack for every gem cleared × combo.');
+const KIND={k:'starter',s:'signature',x:'advanced'};
+const DESC={dmg:v=>'Hits for '+v+'× your Attack × skill power.',drain:v=>'Hits for '+v+'× Attack and heals you for 50% of the damage dealt (the heal follows this slider).',
+ shred:v=>'Hits for '+v+'× Attack, strips the enemy shield and Sunders it (+20% damage taken for 2 turns).',nova:v=>'Hits for '+v+'× Attack and Freezes the enemy (it skips its turn).',
+ envn:v=>'Hits for '+v+'× Attack and Poisons for 4 turns (poison ticks use the Damage-over-time sliders).',turn:v=>'Hits for '+v+'× Attack; against undead foes the hit is ×2 or more.',
+ bash:v=>'Hits for (45% Attack + 110% Armor) × '+v+' and Stuns the enemy.',trap:v=>'Hits for 35% of '+v+'× Attack now and lays snare traps (trap explosions use the “Snare traps sprung” slider).'};
+for(const c of Object.keys(CL)){const cl=CL[c];for(const[part,list]of[['k',cl.k],['s',cl.s||[]],['x',cl.x]])for(const s of list){if(!OFFE.has(s[2]))continue;
+ add(cl.i+' '+c+' skills','ps:'+s[0],s[0],s[2]=='trap'?s[3]*.35:s[3],s[2]=='bash'?'× (45% Atk + 110% Armor)':'× Attack',c+' '+KIND[part]+' skill · costs '+cost(s[1])+' · '+DESC[s[2]](s[3])+' Changes only '+s[0]+' (Spell Echo repeats included).')}}
+for(const s of UNI){if(!OFFE.has(s[2]))continue;add('🌟 Universal skills (any class)','ps:'+s[0],s[0],s[3],'× Attack','Universal skill any class can buy · costs '+cost(s[1])+' · '+DESC[s[2]](s[3])+' Changes only '+s[0]+'.')}
+const GXB={steam:[.45,'and thaws frozen gems + Burns'],surge:[.18,'per bolt, 3 bolts (5 when empowered)'],plasma:[.4,'and +2 mana of every colour'],wild:[.3,'and a 4-turn Burn'],blight:[.25,'and Poison + rot spread'],magnet:[.3,'and a chance to Stun'],mud:[.2,'and erodes the enemy shield, you gain armor'],soul:[.45,'and heals you for part of it']};
+const GXS=(typeof GX!='undefined'&&GX)||{steam:{c:[0,3],i:'♨️',n:'Steam Burst'},surge:{c:[1,3],i:'🌩️',n:'Conductive Surge'},plasma:{c:[0,1],i:'☄️',n:'Plasma Arc'},wild:{c:[0,2],i:'🔥',n:'Wildfire'},blight:{c:[2,4],i:'🍄',n:'Blight Bloom'},magnet:{c:[1,5],i:'🧲',n:'Magnetite Shock'},mud:{c:[3,5],i:'🌊',n:'Mudslide'},soul:{c:[4,6],i:'👻',n:'Soul Rend'}};
+for(const id of Object.keys(GXS)){const X=GXS[id],b=GXB[id]||[.3,''];add('✨ Gem resonances',`cx:${id}`,X.i+' '+X.n,b[0],'× Attack per gem','Fires when matching '+GEM[X.c[0]]+' and '+GEM[X.c[1]]+' groups touch: '+b[0]+'× Attack for every gem in both groups '+b[1]+'. Vault mutators still multiply on top.')}
+add('🔑 Keystones & passives','ks_storm','🌩️ Chain Lightning (Storm keystone)',.6,'× Attack per detonation','Storm keystone: every special-gem detonation zaps the enemy for 0.6× Attack.');
+add('🔑 Keystones & passives','ks_overflow','🌊 Overflow keystone',.4,'× Attack per wasted mana','Overflow keystone: each point of mana gained above the cap hits for 0.4× Attack.');
+add('🔑 Keystones & passives','ks_midas','👑 Golden Touch (Midas keystone)',.5,'× Attack per Topaz','Midas keystone: each Topaz matched hits for 0.5× Attack × combo.');
+add('🔑 Keystones & passives','trap_sprung','🪤 Snare traps sprung',1.6,'× Attack per trap','Ranger Snare Trap tiles: each trap caught in an enemy match explodes for 1.6× Attack.');
+add('🔑 Keystones & passives','thorns_p','🌹 Thorn Barrier reflect',1,'× banked overheal','Thorns keystone: overhealing is banked and reflected back when you are hit. Scales the reflected damage (not the bank size).');
+add('🔥 Damage over time (you → enemy)','dot_burn_e','🔥 Burn on enemy',.04,'× enemy max HP per round','Burning enemies lose 4% of their max HP each round (Mage fire, Wildfire, Steam Burst, Elemental Splash).');
+add('🔥 Damage over time (you → enemy)','dot_venom','🦂 Venom keystone',.03,'× enemy max HP per round','Venom keystone: a poisoned enemy also loses 3% max HP each round.');
+add('🔥 Damage over time (you → enemy)','dot_toxin','🗡️ Rogue Toxin',.025,'× enemy max HP per round','Rogue class passive: poison also bleeds 2.5% of the enemy’s max HP each round.');
+add('🔥 Damage over time (you → enemy)','dot_purge','🧬 Research curse (vs guardians)',.005,'× max HP × research level','Research Lab perk: guardians/tactic bosses lose 0.5% max HP per perk level every round.');
+add('🛡️ Gear','gear_atk','⚔️ Gear Attack bonus',1,'× item Attack','Scales the Attack your equipped items add (weapon, rings, sets). Your class and level Attack is unchanged.');
+add('🛡️ Gear','crit','💥 Critical hits',1.75,'× damage on a crit','Critical hits deal 1.75× damage. Crit CHANCE (Amulet, Rogue, gear) is unchanged; only how hard crits land.');
+add('👹 Enemy damage (→ you)','skull_e','💀 Enemy skull matches',.6,'× enemy Attack per skull','Enemy skull matches hit you for 0.6× its Attack per skull × combo (×2 when enraged).');
+for(const s of ES)if(OFFE.has(s[2]))add('👹 Enemy damage (→ you)','es:'+s[0],'🗡️ Enemy skill: '+s[0],s[3],'× enemy Attack','Enemy skill · costs '+cost(s[1])+' of its mana · hits you for '+s[3]+'× its Attack.');
+add('👹 Enemy damage (→ you)','wipe_e','🌌 Enemy Board Wipe',3,'× enemy Attack','When the enemy fires a Board Wipe combo it hits you for 3× its Attack.');
+add('👹 Enemy damage (→ you)','dot_burn_p','🔥 Burn on you',.05,'× your max HP per round','Burning hurts you for 5% of your max HP per round (9% vs an enraged enemy).');
+add('👹 Enemy damage (→ you)','affix_thorns','🌵 Thorns affix (elites / NG+)',.08,'× damage you dealt','Enemies with the Thorns affix reflect 8% of the damage you deal back to you.');
+const ALL=G.flatMap(g=>g.items),BYK=Object.fromEntries(ALL.map(i=>[i.key,i]));
+
+/* ---------- storage: applied (live) + draft ---------- */
+const blank=()=>Array.from({length:ND},()=>({}));
+let applied=blank();try{const o=JSON.parse(localStorage.getItem(KEY)||'null');if(o&&Array.isArray(o.prof))applied=Array.from({length:ND},(_,i)=>Object.assign({},o.prof[i]||{}))}catch(_){}
+let draft=applied.map(p=>Object.assign({},p)),tab=Math.max(0,Math.min(ND-1,(window.S&&S.diff)|0)),q='';
+const clean=p=>{for(const k in p)if(p[k]==50||!BYK[k])delete p[k];return p};
+function m(k){const d=(S&&Number.isInteger(S.diff))?S.diff:2,p=applied[d];return p&&p[k]!=null?mult(p[k]):1}
+const dirty=()=>JSON.stringify(draft.map(p=>clean(Object.assign({},p))))!==JSON.stringify(applied.map(p=>clean(Object.assign({},p))));
+const L=(k,s)=>{try{window.logDebugIssue(k,s)}catch(_){}};
+
+/* ---------- UI: console tab bar + pane ---------- */
+const con=document.getElementById('debugTestingConsole'),hd=document.getElementById('dbgHd'),body=document.getElementById('dbgBody');
+const st=document.createElement('style');st.textContent=
+'#dbgTabs{display:flex;gap:4px;margin:0 auto 0 8px}#dbgTabs button{min-width:0!important;min-height:0!important;padding:2px 8px!important;font:600 9.5px/1.3 ui-monospace,Menlo,monospace!important;color:#c9a24e!important;background:none!important;border:1px solid rgba(201,162,78,.3)!important;border-radius:4px!important;box-shadow:none!important;text-shadow:none!important;transform:none!important;filter:none!important;text-transform:none;letter-spacing:0}'
++'#dbgTabs button.on{color:#1a0f04!important;background:linear-gradient(180deg,#e9c88c,#b08838)!important}'
++'#dbgBal{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px}#dbgBal[hidden]{display:none}#dbgBody[hidden]{display:none!important}'
++'#balD{display:flex;flex-wrap:wrap;gap:4px}#balD button{flex:1 1 0;min-width:0!important;min-height:30px!important;padding:3px 4px!important;font:600 9.5px/1.2 ui-monospace,Menlo,monospace!important;color:#d6c6aa!important;background:rgba(255,235,200,.04)!important;border:1px solid rgba(201,162,78,.32)!important;border-radius:5px!important;box-shadow:none!important;text-shadow:none!important;transform:none!important;filter:none!important}'
++'#balD button.on{color:#1a0f04!important;background:linear-gradient(180deg,#e9c88c,#b08838)!important}#balD small{display:block;font-size:8px;opacity:.8}'
++'#balBar{display:flex;flex-wrap:wrap;gap:4px;align-items:center}#balBar input{flex:1 1 100%;min-width:0!important;height:28px!important;min-height:0!important;padding:3px 7px!important;font:500 11px/1 ui-monospace,Menlo,monospace!important;color:#e9dcc4!important;background:rgba(0,0,0,.4)!important;border:1px solid rgba(201,162,78,.3)!important;border-radius:4px!important;box-shadow:none!important;margin:0!important}#balBar .dbgmini{flex:1 1 auto}'
++'#balSt{font-size:9.5px;color:#8f7f6a}#balSt.dirty{color:#f0c060}'
++'#balL{flex:1;min-height:160px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding-right:2px}'
++'#balL details{border:1px solid rgba(201,162,78,.22);border-radius:5px;margin-bottom:5px;background:rgba(0,0,0,.25)}#balL summary{cursor:pointer;padding:5px 7px;color:#e9c88c;font-size:10.5px;list-style:none;display:flex;justify-content:space-between}#balL summary::-webkit-details-marker{display:none}#balL summary .ch{color:#ffb35c}'
++'.balR{padding:6px 8px 7px;border-top:1px dotted rgba(201,162,78,.14)}.balR .t{display:flex;justify-content:space-between;gap:6px;color:#e9dcc4;font-size:10.5px}.balR .t b{white-space:nowrap;color:#9fe0a8}.balR .t b.lo{color:#ff9a8a}.balR .t b.mid{color:#8f7f6a}'
++'.balR input[type=range]{width:100%;margin:4px 0 2px;accent-color:#d4af37;touch-action:pan-x}.balR .tip{color:#9c8b73;font:500 9px/1.35 ui-monospace,Menlo,monospace}.balR .nv{color:#c9a24e;font:600 9px/1.3 ui-monospace,Menlo,monospace}'
++'#balSnap{position:absolute;inset:6px;z-index:4;display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid rgba(201,162,78,.6);border-radius:7px;background:rgba(10,8,6,.97)}#balSnap textarea{flex:1;min-height:180px;width:100%;box-sizing:border-box;font:500 9.5px/1.35 ui-monospace,Menlo,monospace;color:#e9dcc4;background:#000;border:1px solid rgba(201,162,78,.3);border-radius:4px;padding:6px}';
+document.head.append(st);
+const tabs=document.createElement('span');tabs.id='dbgTabs';tabs.innerHTML='<button type="button" data-v="mon" class="on">🧪 Monitor</button><button type="button" data-v="bal">⚖️ Balance</button>';
+hd.insertBefore(tabs,hd.lastElementChild);
+const pane=document.createElement('div');pane.id='dbgBal';pane.hidden=true;
+pane.innerHTML='<div id="balD"></div><div id="balBar"><input id="balQ" type="search" placeholder="Filter sliders… (e.g. fireball, skull, burn)" aria-label="Filter balance sliders">'
++'<button type="button" class="dbgmini" id="balSave">💾 Save &amp; apply</button><button type="button" class="dbgmini" id="balRes">↺ Reset tab</button><button type="button" class="dbgmini" id="balCopy">⧉ Copy to all</button><button type="button" class="dbgmini" id="balSnapB">📸 Snapshot</button></div>'
++'<div id="balSt"></div><div id="balL"></div>';
+body.after(pane);
+for(const ev of['input','change','keydown'])pane.addEventListener(ev,e=>e.stopPropagation());
+function view(v){body.hidden=v=='bal';pane.hidden=v!='bal';tabs.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v==v));if(v=='bal'){tab=(S&&Number.isInteger(S.diff))?S.diff:tab;render()}}
+tabs.onclick=e=>{const b=e.target.closest('button');if(b){e.stopPropagation();view(b.dataset.v)}};
+const $b=id=>pane.querySelector('#'+id);
+function status(){const d=dirty(),live=(S&&Number.isInteger(S.diff))?S.diff:2,n=Object.keys(clean(Object.assign({},applied[live]))).length;
+ const el=$b('balSt');el.classList.toggle('dirty',d);el.textContent=(d?'● Unsaved changes · press 💾 Save & apply to use them in the game':'✓ Saved')+' · live profile: '+DIFF[live].ic+' '+DIFF[live].n+' ('+n+' slider'+(n==1?'':'s')+' changed)'+(tab!=live?' · you are editing '+DIFF[tab].n+', which is not your current difficulty':'')}
+function rowHtml(i){const v=draft[tab][i.key]!=null?draft[tab][i.key]:50,mu=mult(v),cls=v>50?'':v<50?'lo':'mid';
+ return'<div class="balR" data-k="'+esc(i.key)+'"><div class="t"><span>'+esc(i.label)+'</span><b class="'+cls+'">'+v+' · ×'+fx(mu)+'</b></div>'
+ +'<input type="range" min="1" max="100" step="1" value="'+v+'" aria-label="'+esc(i.label)+' strength">'
+ +'<div class="nv">Base '+(+i.base.toFixed(3))+' '+esc(i.unit)+' → now '+(+(i.base*mu).toFixed(3))+' '+esc(i.unit)+'</div><div class="tip">'+esc(i.tip)+'</div></div>'}
+function render(){$b('balD').innerHTML=DIFF.map((d,i)=>{const n=Object.keys(clean(Object.assign({},draft[i]))).length,live=S&&S.diff==i;return'<button type="button" data-d="'+i+'" class="'+(i==tab?'on':'')+'">'+d.ic+' '+d.n+'<small>'+(live?'● live · ':'')+(n?n+' changed':'all 50')+'</small></button>'}).join('');
+ const open=new Set([...$b('balL').querySelectorAll('details[open]')].map(d=>d.dataset.g));const qq=q.toLowerCase();
+ $b('balL').innerHTML=G.map(g=>{const its=g.items.filter(i=>!qq||(g.n+' '+i.label+' '+i.tip+' '+i.key).toLowerCase().includes(qq));if(!its.length)return'';const ch=its.filter(i=>draft[tab][i.key]!=null&&draft[tab][i.key]!=50).length;
+  return'<details data-g="'+esc(g.n)+'"'+(qq||open.has(g.n)?' open':'')+'><summary><span>'+esc(g.n)+' <span style="color:#8f7f6a">('+its.length+')</span></span><span class="ch">'+(ch?ch+' changed':'')+'</span></summary>'+its.map(rowHtml).join('')+'</details>'}).join('')||'<div class="tip">No slider matches “'+esc(q)+'”.</div>';status()}
+$b('balD').onclick=e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();tab=+b.dataset.d;render()};
+$b('balQ').oninput=e=>{q=e.target.value;render()};
+$b('balL').addEventListener('input',e=>{const r=e.target;if(r.type!='range')return;const row=r.closest('.balR'),k=row.dataset.k,i=BYK[k],v=+r.value;draft[tab][k]=v;
+ const mu=mult(v),b=row.querySelector('.t b');b.textContent=v+' · ×'+fx(mu);b.className=v>50?'':v<50?'lo':'mid';row.querySelector('.nv').textContent='Base '+(+i.base.toFixed(3))+' '+i.unit+' → now '+(+(i.base*mu).toFixed(3))+' '+i.unit;
+ const det=row.closest('details'),ch=[...det.querySelectorAll('.balR')].filter(x=>{const d=draft[tab][x.dataset.k];return d!=null&&d!=50}).length;det.querySelector('.ch').textContent=ch?ch+' changed':'';
+ const db=$b('balD').querySelector('[data-d="'+tab+'"] small');if(db){const n=Object.keys(clean(Object.assign({},draft[tab]))).length;db.textContent=(S&&S.diff==tab?'● live · ':'')+(n?n+' changed':'all 50')}status()});
+function save(){draft.forEach(clean);applied=draft.map(p=>Object.assign({},p));try{localStorage.setItem(KEY,JSON.stringify({v:1,saved:new Date().toISOString(),prof:applied}))}catch(e){L('ERROR','Balance save failed: '+e.message);return}
+ try{if(typeof draw=='function')draw()}catch(_){}
+ const live=(S&&Number.isInteger(S.diff))?S.diff:2,ch=Object.entries(applied[live]);L('INFO','⚖️ Balance saved · live on '+DIFF[live].n+': '+(ch.length?ch.map(([k,v])=>(BYK[k]?BYK[k].label:k)+' '+v+' (×'+fx(mult(v))+')').join(', '):'all sliders at 50 (unchanged game)'));render()}
+$b('balSave').onclick=e=>{e.stopPropagation();save()};
+$b('balRes').onclick=e=>{e.stopPropagation();if(!confirm('Reset every '+DIFF[tab].n+' slider to 50? (Press 💾 Save & apply afterwards to make it live.)'))return;draft[tab]={};render()};
+$b('balCopy').onclick=e=>{e.stopPropagation();if(!confirm('Copy the '+DIFF[tab].n+' sliders to all 5 difficulties? (Unsaved until 💾 Save & apply.)'))return;const src=Object.assign({},draft[tab]);draft=draft.map(()=>Object.assign({},src));render()};
+/* ---------- snapshot ---------- */
+function snapshot(){const out={format:'gemgrind-balance-snapshot',version:'5.9',created:new Date().toISOString(),scale:'slider 1-100, 50 = current game, multiplier = 1 + (slider-50)/100',unsaved:dirty(),difficulties:{}};
+ applied.forEach((p,i)=>{const ch={};for(const[k,v]of Object.entries(clean(Object.assign({},p)))){const it=BYK[k];ch[k]={label:it.label,slider:v,multiplier:+fx(mult(v)),base:it.base,newValue:+(it.base*mult(v)).toFixed(4),unit:it.unit}}out.difficulties[DIFF[i].n]={index:i,changed:Object.keys(ch).length,sliders:ch}});return out}
+$b('balSnapB').onclick=e=>{e.stopPropagation();const s=snapshot(),txt=JSON.stringify(s,null,1);
+ let el=document.getElementById('balSnap');if(el)el.remove();el=document.createElement('div');el.id='balSnap';
+ el.innerHTML='<div class="dbgsec">📸 Balance snapshot (saved values'+(s.unsaved?' · ⚠ you also have UNSAVED changes not included':'')+')</div><textarea readonly></textarea><div style="display:flex;gap:6px;justify-content:flex-end"><button type="button" class="dbgmini" id="balSC">Copy</button><button type="button" class="dbgmini" id="balSX">Close</button></div>';
+ el.querySelector('textarea').value=txt;con.append(el);el.addEventListener('click',ev=>ev.stopPropagation());
+ el.querySelector('#balSX').onclick=()=>el.remove();el.querySelector('#balSC').onclick=()=>{const b=el.querySelector('#balSC');try{navigator.clipboard.writeText(txt).then(()=>{b.textContent='Copied ✓'},()=>{el.querySelector('textarea').select();b.textContent='Select + copy'})}catch(_){el.querySelector('textarea').select()}};
+ const n=Object.values(s.difficulties).reduce((a,d)=>a+d.changed,0);L('INFO','📸 Balance snapshot taken · '+n+' changed slider'+(n==1?'':'s')+' across '+Object.values(s.difficulties).filter(d=>d.changed).length+' difficulties · included in 💾 Export')};
+/* QA export carries the profiles */
+if(window.QARec){const r0=QARec.report;QARec.report=function(){const r=r0.apply(this,arguments);try{r.balance=snapshot()}catch(_){}return r}}
+/* boot note when a tuned profile is live */
+setTimeout(()=>{try{const live=S.diff,n=Object.keys(applied[live]||{}).length;if(n)L('INFO','⚖️ Debug balance profile active on '+DIFF[live].n+' ('+n+' slider'+(n==1?'':'s')+' changed)')}catch(_){}},1500);
+return{m,mult,catalog:()=>G,snapshot,get applied(){return applied},get draft(){return draft},view,save,render}})();
+
+/* =====================================================================
+   v5.9 🧠 SMART QA BOT + 🎯 BALANCE ADVISOR (debug only)
+   QABrain is consulted by the Autoplay tick (combat only, never gathering trips):
+   - Moves: every legal swap is scored. 4+ matches (free extra turn) and special-gem combos come first,
+     then 5-match / L / T specials, skulls, gem-colour resonances, mana for the skill it is saving for,
+     Emeralds when Burning / Poisoned / frozen, and denying the enemy the colour it needs.
+   - Skills (casting ends the turn, so a guaranteed extra turn is always taken first):
+     heal when hurt, armor before a big enemy turn, kill shots, Shred vs shields, Frost Nova / Shield Bash
+     to stop a charged enemy, Envenom on a clean target, Turn Undead vs undead, traps when none are set,
+     skull converters when the board lacks skulls, mana skills when starved, Blood Sacrifice only when healthy.
+   QAAdvisor attributes every point of damage to its balance slider (BX key), then suggests slider moves
+   for the live difficulty: logged as ADVISOR lines and listed in the ⚖️ Balance tab with an Apply button.
+   ===================================================================== */
+window.QABrain=(()=>{const L=(k,m)=>{try{window.logDebugIssue(k,m)}catch(_){}};
+let on=true;try{on=localStorage.getItem('gg_brain')!=='0'}catch(_){}
+const blocked=new Set();let blockE=null;const stats={casts:{},bigMatches:0,specials:0,moves:0,extraTurns:0,reasons:{}};
+const DMG=new Set(['dmg','drain','shred','nova','envn','turn','bash','trap']);
+const W=o=>Object.values(o).reduce((a,b)=>a+b,0);
+const capOf=()=>{try{return CAP}catch(_){return 30}};
+function bars(){let ids=[];try{ids=bar()}catch(_){return[]}const st=stat();
+ return ids.map((id,i)=>{const k=SKL[id];if(!k)return null;let o={};try{o=cost(k,0)}catch(_){o=k[1]}const btn=(()=>{try{return document.getElementById('skills').children[i]}catch(_){return null}})(),gated=!!btn&&(btn.disabled||btn.classList.contains('gate-locked')||btn.classList.contains('locked')),ok=!gated&&!blocked.has(id)&&(()=>{try{return can(P.m,o)&&avail(S.cls).includes(id)&&owned(id)&&!(k[2]=='sacr'&&P.hp<=stat().hp*.2)}catch(_){return false}})();
+  return{i,id,k,type:k[2],v:k[3],cost:o,ok,est:DMG.has(k[2])?st.atk*k[3]*(st.skp||1)*(k[2]=='trap'?.35:1)*(window.DBAL?DBAL.m('ps:'+k[0]):1):0}}).filter(Boolean)}
+/* which colours the bot is saving for: the cheapest useful skill it cannot afford yet */
+function wantColours(B2){const w=[0,0,0,0,0,0];for(const s of B2){if(s.ok)continue;const pr=s.type=='heal'?(P.hp<stat().hp*.6?3:.5):DMG.has(s.type)?2:1;for(const c in s.cost){const need=Math.max(0,s.cost[c]-(P.m[c]||0));if(need>0)w[c]+=pr/Math.max(1,W(s.cost))*need}}return w}
+function enemyThreat(){let r=0;try{for(const k of E.sk||[]){const need=Object.entries(k[1]).reduce((a,[c,n])=>a+Math.max(0,n-(E.m[c]||0)),0);if(need<=2&&k[2]=='dmg')r=Math.max(r,2);else if(need<=4)r=Math.max(r,1)}}catch(_){}return r}
+/* ---------- move scoring ---------- */
+function scoreMoves(want){const out=[];let skullV=10;try{skullV=E.arm>0?6:12}catch(_){}
+ const hurt=(P.st&&(P.st.burn>0||P.st.poison>0))||FZ.some(x=>x>0);let deny=[0,0,0,0,0,0];try{for(const k of E.sk||[])for(const c in k[1])deny[c]+=.4}catch(_){}
+ tryMoves((a,b)=>{const gs=groups();if(!gs.length)return;let s=0,big=false,spec=0,cnt=0,cols=new Set;
+  for(const g of gs){const L=Math.max(...g.runs.map(r=>r.c.length)),hv=g.runs.some(r=>r.o=='h')&&g.runs.some(r=>r.o=='v');if(L>=4)big=true;if(L>=5)spec=Math.max(spec,3);else if(hv&&g.cells.size>=5)spec=Math.max(spec,2);else if(L==4)spec=Math.max(spec,1);
+   cols.add(g.v);for(const i of g.cells){cnt++;const v=B[i];if(v==6)s+=skullV;else if(v>=0&&v<6){s+=1+(want[v]||0)*4+(deny[v]||0);if(v==2&&hurt)s+=3}if(TR[i])s+=2}}
+  if(big)s+=100;s+=spec*25;if(cols.size>=2)s+=12;s+=cnt;
+  /* bottom-row matches cascade more */
+  s+=(Math.max(a,b)/N|0)*.3;out.push({a,b,s,big,spec})});
+ try{const sp=specPair();if(sp)out.push({a:sp[0],b:sp[1],s:140,big:false,spec:9,combo:1})}catch(_){}
+ try{const c=catMove();if(c)out.push({a:c[0],b:c[1],s:95,big:false,spec:8,combo:1})}catch(_){}
+ return out.sort((x,y)=>y.s-x.s)}
+/* ---------- skill decision ---------- */
+function chooseCast(B2,best){const st=stat(),hp=P.hp/st.hp,ready=B2.filter(s=>s.ok);if(!ready.length)return null;
+ const thr=enemyThreat(),eh=E.hp+(E.arm||0),undead=(()=>{try{return UNDEAD.test(E.n)}catch(_){return false}})(),comboMul=P.cc>1?P.cc:1;let pick=null,why='';
+ const by=t=>ready.filter(s=>s.type==t),top=a=>a.sort((x,y)=>y.est-x.est)[0];
+ /* 1 survival */
+ if(hp<.35&&by('heal').length){pick=top(by('heal').map(s=>(s.est=s.v,s)));why='low HP ('+Math.round(hp*100)+'%)'}
+ else if(hp<.5&&by('drain').length){pick=top(by('drain'));why='hurt: lifesteal hit'}
+ /* 2 kill shot */
+ if(!pick){const ks=ready.filter(s=>DMG.has(s.type)).map(s=>Object.assign({},s,{est:s.est*comboMul*(s.type=='turn'&&undead?2:1)})).filter(s=>s.est>=eh*.95).sort((x,y)=>x.est-y.est)[0];if(ks){pick=ks;why='kill shot ('+Math.round(ks.est)+' ≥ '+Math.round(eh)+' HP)'}}
+ /* a guaranteed extra turn is free: take it before ending the turn with a cast */
+ if(!pick&&best&&best.big&&!(st.ks&&st.ks.chain))return null;
+ if(!pick&&hp<.6&&by('heal').length&&thr){pick=by('heal')[0];why='heal before the enemy turn'}
+ if(!pick&&thr>=2&&P.arm<st.cap*.3&&by('arm').length&&hp<.85){pick=by('arm')[0];why='armor up: enemy skill charged'}
+ if(!pick&&thr>=2&&by('nova').length){pick=by('nova')[0];why='freeze a charged enemy'}
+ if(!pick&&thr>=2&&by('bash').length){pick=by('bash')[0];why='stun a charged enemy'}
+ if(!pick&&E.arm>E.mx*.08&&by('shred').length){pick=by('shred')[0];why='shred '+Math.round(E.arm)+' shield'}
+ if(!pick&&undead&&by('turn').length){pick=by('turn')[0];why='undead target'}
+ if(!pick&&!(E.st&&E.st.poison>0)&&by('envn').length){pick=by('envn')[0];why='poison a clean target'}
+ if(!pick&&!TR.some(x=>x>0)&&by('trap').length){pick=by('trap')[0];why='no traps set'}
+ /* 3 damage when the board offers nothing better than a plain match, or a combo multiplier is banked */
+ if(!pick){const dm=ready.filter(s=>['dmg','drain','shred','nova','envn','turn','bash'].includes(s.type)).sort((x,y)=>y.est-x.est)[0];
+  if(dm&&(comboMul>1||!best||best.s<60||P.m.some(v=>v>=capOf()-2))){pick=dm;why=comboMul>1?'banked combo ×'+comboMul:'best damage option'}}
+ if(!pick){const sk=by('sk')[0],sk6=B.filter(v=>v==6).length;if(sk&&sk6<4&&(!best||best.s<40)){pick=sk;why='board short on skulls ('+sk6+')'}}
+ if(!pick&&by('mana').length&&W(P.m)<12){pick=by('mana')[0];why='mana starved'}
+ if(!pick&&by('sacr').length&&hp>.75&&W(P.m)<15&&!thr){pick=by('sacr')[0];why='healthy, buying mana'}
+ if(!pick&&hp<.75&&by('heal').length&&P.m.some(v=>v>=capOf()-1)){pick=by('heal')[0];why='mana capped, topping up'}
+ if(!pick&&P.arm<st.cap*.5&&by('arm').length&&P.m.some(v=>v>=capOf()-1)){pick=by('arm')[0];why='mana capped, shielding'}
+ return pick?{i:pick.i,name:pick.k[0],why}:null}
+let lastMoveBig=false;
+function decide(){if(!on)return null;try{if(GT||!E||E.dead||dead)return null;if(blockE!==E){blockE=E;blocked.clear()}const B2=bars(),want=wantColours(B2),ms=scoreMoves(want),best=ms[0]||null;
+  const c=chooseCast(B2,best);
+  if(c){stats.casts[c.name]=(stats.casts[c.name]||0)+1;stats.reasons[c.why.split(' ')[0]]=(stats.reasons[c.why.split(' ')[0]]||0)+1;try{QARec.crumb('🧠 cast '+c.name+' · '+c.why)}catch(_){}L('QA','🧠 Cast '+c.name+' · '+c.why);const nm=c.name;setTimeout(()=>{try{if(!busy&&!E.dead&&AutoplayEngine.on){blocked.add(nm);L('GLITCH','🧠 '+nm+' looked castable but the game refused it (locked slot or hidden rule) · skipped for this fight')}}catch(_){}},60);return{cast:c.i}}
+  if(best){stats.moves++;if(best.big)stats.bigMatches++;if(best.combo||best.spec>=8)stats.specials++;lastMoveBig=best.big;
+   if(best.big||best.combo)try{QARec.crumb('🧠 '+(best.combo?'special combo':'4+ match (extra turn)')+' ('+best.a%N+','+(best.a/N|0)+')↔('+best.b%N+','+(best.b/N|0)+')')}catch(_){}
+   return{move:[best.a,best.b]}}}catch(e){L('ERROR','QABrain decide failed: '+e.message)}return null}
+/* extra turns actually granted */
+try{const _f=fl;fl=function(t){if(on&&typeof t=='string'&&t.indexOf('Extra turn')>=0&&window.AutoplayEngine&&AutoplayEngine.on)stats.extraTurns++;return _f.apply(this,arguments)}}catch(_){}
+const btn=DebugBar.add('brbtn','Smart bot brain for Autoplay / QA Simulation: casts skills by situation and takes 4+ matches for free extra turns. OFF = the old simple bot (for A/B comparisons).',()=>{on=!on;try{localStorage.setItem('gg_brain',on?'1':'0')}catch(_){}lbl();L('QA','🧠 Smart bot '+(on?'ON':'OFF (simple bot)'))});
+const lbl=()=>{btn.textContent='🧠 [DEBUG] Smart bot: '+(on?'ON':'OFF');btn.classList.toggle('on',on)};lbl();
+{const s=document.createElement('style');s.textContent='#brbtn{order:5}';document.head.append(s)}
+return{decide,scoreMoves,chooseCast,bars,stats,get on(){return on},set on(v){on=!!v;lbl()}}})();
+
+/* ===================== 🎯 BALANCE ADVISOR ===================== */
+window.QAAdvisor=(()=>{const L=(k,m)=>{try{window.logDebugIssue(k,m)}catch(_){}};const now=()=>Date.now();
+const SKIP=new Set(['all_p','all_e','crit','gear_atk']),TAKEN=k=>/^es:|^skull_e$|^wipe_e$|^dot_burn_p$|^affix_thorns$/.test(k);
+const src={};let pend=null;
+const hpE=()=>{try{return Math.max(0,+E.hp||0)}catch(_){return 0}},hpP=()=>{try{return Math.max(0,+P.hp||0)+Math.max(0,+P.arm||0)}catch(_){return 0}};
+function fin(){if(!pend)return;const p=pend;pend=null;const d=TAKEN(p.k)?p.ph-hpP():p.eh-hpE();const r=src[p.k]||(src[p.k]={n:0,dmg:0,diff:{}});r.n++;if(d>0)r.dmg+=d;const df=S.diff;r.diff[df]=(r.diff[df]||0)+Math.max(0,d)}
+/* every damage formula calls BX(key) right before it lands, so the key names the source of the next HP change */
+if(typeof BX=='function'){const _bx=BX;BX=function(k){if(!SKIP.has(k)){fin();pend={k,eh:hpE(),ph:hpP()};queueMicrotask(fin)}return _bx.apply(this,arguments)}}
+const BAND=[[.9,1],[.8,.95],[.65,.8],[.5,.65],[.35,.5]];
+const sugg=[];const seen={};
+function suggest(key,slider,why){const p=window.DBAL?DBAL.applied[S.diff]||{}:{},cur=p[key]!=null?p[key]:50;slider=Math.max(1,Math.min(100,Math.round(slider/5)*5));if(Math.abs(slider-cur)<5)return;
+ const id=S.diff+'|'+key+'|'+slider;if(seen[id]&&now()-seen[id]<600000)return;seen[id]=now();
+ const lbl=window.DBAL&&DBAL.catalog().flatMap(g=>g.items).find(i=>i.key==key),name=lbl?lbl.label:key;
+ const s={ts:now(),diff:S.diff,key,name,from:cur,to:slider,why};sugg.unshift(s);if(sugg.length>40)sugg.pop();
+ L('ADVISOR','🎯 '+DIFF[S.diff].n+': '+name+' '+cur+' → '+slider+' (×'+(1+(cur-50)/100).toFixed(2)+' → ×'+(1+(slider-50)/100).toFixed(2)+') · '+why);paint()}
+function analyse(){if(!window.QATele||!S||!S.hero)return;const T=QATele.report(),F=T.fights.filter(f=>f.res!='abandoned'),d=S.diff;if(F.length<4)return;
+ const rec=F.slice(-12),enough=rec.length>=8,w=rec.filter(f=>f.res=='win').length,wr=w/rec.length,[lo,hi]=BAND[d]||[.6,.8],turns=rec.reduce((a,f)=>a+f.pt,0)/rec.length;
+ const p=window.DBAL?DBAL.applied[d]||{}:{},cur=k=>p[k]!=null?p[k]:50;
+ /* 1 overall difficulty vs the target win-rate band for this difficulty */
+ const tk=Object.entries(src).filter(([k])=>TAKEN(k)).map(([k,r])=>[k,r.diff[d]||0]).sort((a,b)=>b[1]-a[1]),tot=tk.reduce((a,x)=>a+x[1],0);
+ if(enough&&wr<lo){const gap=Math.min(25,Math.round((lo-wr)*60)+5);
+  if(tk.length&&tot>0&&tk[0][1]/tot>.45)suggest(tk[0][0],cur(tk[0][0])-gap,'win rate '+Math.round(wr*100)+'% is under the '+Math.round(lo*100)+'–'+Math.round(hi*100)+'% target and this source deals '+Math.round(tk[0][1]/tot*100)+'% of the damage you take');
+  else suggest('all_e',cur('all_e')-gap,'win rate '+Math.round(wr*100)+'% is under the '+Math.round(lo*100)+'–'+Math.round(hi*100)+'% target over the last '+rec.length+' fights')}
+ else if(enough&&wr>hi&&turns<6)suggest('all_p',cur('all_p')-10,'win rate '+Math.round(wr*100)+'% is above the '+Math.round(hi*100)+'% target and fights end in '+turns.toFixed(1)+' turns');
+ if(turns>16&&wr>=lo)suggest('all_p',cur('all_p')+10,'fights drag on for '+turns.toFixed(1)+' player turns on average');
+ /* 2 skill efficiency: damage per cast per mana point, compared with the class median */
+ const cls=S.cls,sk=Object.entries(src).filter(([k,r])=>k.startsWith('ps:')&&r.n>=4).map(([k,r])=>{const s=SKL[k.slice(3)];const mana=s?Object.values(s[1]).reduce((a,b)=>a+b,0):10;return{k,per:r.dmg/r.n,eff:r.dmg/r.n/mana,n:r.n}});
+ if(sk.length>=2){const med=sk.map(x=>x.eff).sort((a,b)=>a-b)[sk.length>>1];for(const x of sk){const ratio=x.eff/med;if(ratio<.6)suggest(x.k,cur(x.k)+Math.min(40,Math.round((1/ratio-1)*40)),cls+' skill does '+Math.round(x.per)+' per cast, only '+Math.round(ratio*100)+'% of the class median damage per mana');
+   else if(ratio>1.7)suggest(x.k,cur(x.k)-Math.min(30,Math.round((ratio-1)*20)),cls+' skill does '+Math.round(x.per)+' per cast, '+Math.round(ratio*100)+'% of the class median damage per mana')}}
+ /* 3 sources that barely matter */
+ const dealt=Object.entries(src).filter(([k])=>!TAKEN(k)),dt=dealt.reduce((a,[,r])=>a+(r.diff[d]||0),0);
+ if(dt>0){const sk2=dealt.find(([k])=>k=='skull_p');if(sk2&&(sk2[1].diff[d]||0)/dt>.7)suggest('skull_p',cur('skull_p')-10,'skull matches are '+Math.round(sk2[1].diff[d]/dt*100)+'% of all your damage; skills and resonances barely matter');}
+ paint()}
+setInterval(analyse,60000);
+if(window.QATele){let n=0;const _w=win;try{win=function(){const r=_w.apply(this,arguments);if(++n%3==0)setTimeout(analyse,800);return r}}catch(_){}}
+/* ---------- advisor panel inside the ⚖️ Balance tab ---------- */
+let box=null;function paint(){const pane=document.getElementById('dbgBal');if(!pane)return;if(!box){box=document.createElement('details');box.id='balAdv';box.open=true;
+ const s=document.createElement('style');s.textContent='#balAdv{border:1px solid rgba(127,209,255,.4);border-radius:5px;background:rgba(10,30,45,.35);max-height:34%;overflow:auto;flex:none}#balAdv summary{cursor:pointer;padding:5px 7px;color:#7fd1ff;font-size:10.5px}#balAdv .a{padding:5px 7px;border-top:1px dotted rgba(127,209,255,.2);font-size:9.5px;color:#cfe6f5;display:flex;gap:6px;align-items:flex-start}#balAdv .a span{flex:1}#balAdv .a i{color:#8fb3c9;font-style:normal}';document.head.append(s);
+ const st=pane.querySelector('#balSt');pane.insertBefore(box,st.nextSibling);box.addEventListener('click',e=>{const b=e.target.closest('button[data-x]');if(!b)return;e.stopPropagation();const x=sugg[+b.dataset.x];if(!x||!window.DBAL)return;DBAL.draft[x.diff][x.key]=x.to;DBAL.render();b.textContent='✓ in draft';L('INFO','🎯 Advisor suggestion applied to the '+DIFF[x.diff].n+' draft: '+x.name+' → '+x.to+' (press 💾 Save & apply)')})}
+ const per=Object.entries(src).sort((a,b)=>b[1].dmg-a[1].dmg).slice(0,6).map(([k,r])=>k.replace(/^ps:|^es:/,'')+' '+Math.round(r.dmg)).join(' · ');
+ box.innerHTML='<summary>🎯 Balance Advisor · '+sugg.length+' suggestion'+(sugg.length==1?'':'s')+'</summary>'+(sugg.length?sugg.map((x,i)=>'<div class="a"><span><b>'+DIFF[x.diff].ic+' '+esc(x.name)+'</b> '+x.from+' → <b>'+x.to+'</b><br><i>'+esc(x.why)+'</i></span><button type="button" class="dbgmini" data-x="'+i+'">Apply</button></div>').join(''):'<div class="a"><span><i>Needs about 4+ fights of QA data on this difficulty. Run QA Simulation with the 🧠 Smart bot on; suggestions appear here and as ADVISOR lines in the log.</i></span></div>')
+ +(per?'<div class="a"><span><i>Damage by source so far: '+esc(per)+'</i></span></div>':'')}
+setInterval(()=>{const p=document.getElementById('dbgBal');if(p&&!p.hidden)paint()},5000);setTimeout(paint,500);
+if(window.QARec){const r0=QARec.report;QARec.report=function(){const r=r0.apply(this,arguments);try{r.advisor={suggestions:sugg,damageBySource:src,brain:QABrain.stats}}catch(_){}return r}}
+return{analyse,suggest,get sources(){return src},get suggestions(){return sugg}}})();
 
 /* END PLAYTESTING DEBUG TOOLS */
 </script>
