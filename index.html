@@ -6523,7 +6523,7 @@ try{if(Array.isArray(tiles))for(const t of tiles)if(t&&t.firstChild){t.firstChil
 /* Autoplay bot + Auto-Continue + Auto-Retry. Self-contained: it only reads game globals and wraps win()/die() from the outside. */
 /* Hidden collapsible console #debugTestingConsole: toggled by the tiny cog in the bottom-left corner, or the ` (backtick) / F2 keys. Esc closes it.
    Left column: live Play Session Timer + the four automation toggles. Right column: 📋 Live Bug Tracker & Runtime Logs, fed by window.logDebugIssue(). */
-(()=>{const SEV={INFO:'#a8c4d0',WARNING:'#f0c060',ERROR:'#ff6a5a',GLITCH:'#d58aff',PERFORMANCE:'#7df9a8',QA:'#e9c88c'},MAXLOG=300,T0=performance.now();
+(()=>{const SEV={INFO:'#a8c4d0',WARNING:'#f0c060',ERROR:'#ff6a5a',GLITCH:'#d58aff',PERFORMANCE:'#7df9a8',QA:'#e9c88c',VISUAL:'#ff8fd0',GAMEPLAY:'#ffb35c'},MAXLOG=300,T0=performance.now();
 const st=document.createElement('style');st.textContent=
 '#dbgCog{position:fixed;left:calc(4px + env(safe-area-inset-left,0px));bottom:calc(4px + env(safe-area-inset-bottom,0px));z-index:96;width:22px!important;height:22px!important;min-width:0!important;min-height:0!important;padding:0!important;display:flex;align-items:center;justify-content:center;font:13px/1 system-ui,sans-serif!important;color:#c9a24e!important;background:rgba(10,7,5,.55)!important;border:1px solid rgba(201,162,78,.45)!important;border-radius:50%!important;box-shadow:none!important;text-shadow:none!important;opacity:.32;transform:none!important;filter:none!important;transition:opacity .2s}'
 +'#dbgCog:hover,#dbgCog.open,#dbgCog.alert{opacity:.95}#dbgCog .ic{display:inline-block;transition:transform .3s}#dbgCog.open .ic{transform:rotate(90deg)}'
@@ -6543,7 +6543,7 @@ const st=document.createElement('style');st.textContent=
 +'#debugTestingConsole .dbgb{min-height:34px!important;min-width:0!important;padding:4px 6px!important;font:600 10px/1.25 ui-monospace,Menlo,monospace!important;letter-spacing:0!important;text-align:left;color:#d6c6aa!important;background:rgba(255,235,200,.04)!important;border:1px solid rgba(201,162,78,.32)!important;border-radius:5px!important;box-shadow:none!important;text-shadow:none!important;transform:none!important;filter:none!important}'
 +'#debugTestingConsole .dbgb:hover{border-color:rgba(233,200,140,.8)!important}'
 +'#debugTestingConsole .dbgb.on{color:#1a0f04!important;background:linear-gradient(180deg,#e9c88c,#b08838)!important;border-color:#f4dc9a!important}'
-+'#apbtn{order:1}#arbtn{order:2}#acbtn{order:3}#qabtn{order:4}'
++'#apbtn{order:1}#arbtn{order:2}#acbtn{order:3}#qabtn{order:4}#bmbtn{order:5;grid-column:1/-1}'
 +'#dbgCounts{display:flex;flex-wrap:wrap;gap:4px}#dbgCounts span{padding:1px 5px;border-radius:3px;border:1px solid rgba(201,162,78,.2);font-size:9px}'
 +'#dbgRh{display:flex;align-items:center;justify-content:space-between;gap:6px;color:#e9c88c;font-size:10px}#dbgRh>span:last-child{display:flex;gap:4px}'
 +'#dbgLog{flex:1;min-height:150px;height:210px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-user-select:text;user-select:text;padding:5px 6px;border:1px solid rgba(201,162,78,.28);border-radius:5px;background:rgba(0,0,0,.45);font:500 9.5px/1.4 ui-monospace,Menlo,monospace}'
@@ -6573,7 +6573,7 @@ window.logDebugIssue=function(severity,message){const sv=String(severity||'INFO'
  const stick=logEl.scrollHeight-logEl.scrollTop-logEl.clientHeight<24,emp=logEl.querySelector('.empty');if(emp)emp.remove();
  const row=document.createElement('div'),tm=document.createElement('time'),b=document.createElement('b');tm.textContent=t;b.textContent=k+':';b.style.color=SEV[k];row.append(tm,b,document.createTextNode(' '+msg));logEl.append(row);
  while(logEl.children.length>MAXLOG){logEl.firstChild.remove();entries.shift()}if(stick)logEl.scrollTop=logEl.scrollHeight;paintCounts();
- if(con.hidden&&(k=='ERROR'||k=='GLITCH')){unread++;cog.classList.add('alert');cog.title='Playtesting console · '+unread+' new issue'+(unread==1?'':'s')}
+ if(con.hidden&&(k=='ERROR'||k=='GLITCH'||k=='VISUAL'||k=='GAMEPLAY')){unread++;cog.classList.add('alert');cog.title='Playtesting console · '+unread+' new issue'+(unread==1?'':'s')}
  return entries.length};
 con.querySelector('#dbgClr').onclick=()=>{entries.length=0;for(const k in counts)delete counts[k];logEl.innerHTML='<div class="empty">Log cleared.</div>';paintCounts()};
 con.querySelector('#dbgCopy').onclick=()=>{const txt=entries.map(e=>e.t+'  '+e.k+': '+e.msg).join('\n'),b=con.querySelector('#dbgCopy');try{navigator.clipboard.writeText(txt).then(()=>{b.textContent='Copied'},()=>{b.textContent='Failed'})}catch(e){b.textContent='Failed'}setTimeout(()=>{b.textContent='Copy'},1500)};
@@ -6737,6 +6737,106 @@ let seen=0;setInterval(()=>{const q=window.AutoplayEngine&&AutoplayEngine.QA;if(
 let lm=-1,lt=Date.now();setInterval(()=>{const a=window.AutoplayEngine;if(!a||!a.on){lm=-1;return}if(a.moves!=lm){lm=a.moves;lt=Date.now();return}
  if(Date.now()-lt>20000&&curTab=='battle'&&isBattleActive&&!busy&&!sty&&!dead&&lim('stall',20000))L('GLITCH','Autoplay stalled: no moves in 20 s on the battle screen (busy='+busy+', paused='+PAUSED+')')},2000);
 L('INFO','Session started · '+(S.hero?S.hero.name+', '+S.cls+' Lv '+C().l:'no hero yet'));})();
+/* ---------- v5.7g BUG MONITOR · visual / flashing / gameplay watchdog ----------
+   Toggled by its own Automation button, switched ON automatically with QA Simulation, and remembered across reloads
+   (localStorage 'gg_bugmon') so it can catch flicker from the first frame. Read-only: it never touches B, S, E, P or
+   the save; every finding goes to window.logDebugIssue as VISUAL, GAMEPLAY or PERFORMANCE, de-duplicated per issue. */
+window.BugMonitor=(()=>{const L=(k,m)=>{try{window.logDebugIssue(k,m)}catch(_){}};
+let on=false,btn=null,found=0,raf=0,ivs=[],mo=null;const last={},seen={};
+/* one report per issue key per window; repeats are counted and folded into the next report */
+function rep(key,sev,msg,ms){const now=Date.now();if((last[key]||0)>now){seen[key]=(seen[key]||0)+1;return}last[key]=now+(ms||15000);
+ const x=seen[key]?' (+'+seen[key]+' repeats)':'';seen[key]=0;found++;label();L(sev,msg+x+' · '+ctx())}
+const vis=id=>{const e=document.getElementById(id);return!!e&&!e.hidden};
+const ctx=()=>{try{return'tab='+curTab+(GT?' · gathering':E?' · vs '+E.n:'')+(S&&S.cm?' · node '+S.at:'')}catch(_){return'tab=?'}};
+const name=el=>{if(!el||!el.tagName)return'?';if(el===document.body)return'<body>';if(el===document.documentElement)return'<html>';
+ return el.tagName.toLowerCase()+(el.id?'#'+el.id:'')+(el.classList&&el.classList.length?'.'+[...el.classList].slice(0,3).join('.'):'')};
+const area=r=>Math.max(0,r.width)*Math.max(0,r.height),VA=()=>innerWidth*innerHeight;
+const overlap=(a,b)=>Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
+const inBattle=()=>{try{return curTab=='battle'&&!vis('homeScreenViewport')&&!conOpen&&!vis('gl')&&!vis('storyTheaterModal')&&!vis('menu')&&!vis('create')}catch(_){return false}};
+const ownUI=el=>!!(el&&el.closest&&el.closest('#debugTestingConsole,#dbgCog'));
+
+/* ===== VISUAL 1 · class / hidden flip storms: the same token toggling on a large element = screen flicker ===== */
+const flips=new Map(),BIGIDS=new Set(['bw','board','mid','v-battle','pcard','ecard','app','main','vxc','msb']);
+function watchFlips(){mo=new MutationObserver(list=>{const now=performance.now();
+ for(const m of list){const el=m.target;if(ownUI(el)||(el.classList&&el.classList.contains('g'))||(el.closest&&el.closest('#board .g')))continue;
+  let toks;if(m.attributeName=='hidden')toks=['[hidden]'];else{const old=new Set(String(m.oldValue||'').split(/\s+/).filter(Boolean)),cur=new Set(el.classList);toks=[];for(const t of old)if(!cur.has(t))toks.push(t);for(const t of cur)if(!old.has(t))toks.push(t)}
+  for(const t of toks){let r=flips.get(el);if(!r)flips.set(el,r={});const a=r[t]||(r[t]=[]);a.push(now);while(a.length&&now-a[0]>2000)a.shift();
+   if(a.length>=8){const big=el===document.body||el===document.documentElement||BIGIDS.has(el.id)||area(el.getBoundingClientRect())>=VA()*.15;
+    if(big)rep('flip:'+name(el)+t,'VISUAL','FLICKER: '+name(el)+' toggled "'+t+'" '+a.length+'× in 2 s (whole-area flashing)',10000);a.length=0}}}});
+ mo.observe(document.documentElement,{subtree:true,attributes:true,attributeOldValue:true,attributeFilter:['class','hidden']})}
+
+/* ===== VISUAL 2 · canvas luminance sampler: large canvases (e.g. #vxc effects layer) going black / strobing ===== */
+const smp=document.createElement('canvas');smp.width=smp.height=8;const sg=smp.getContext('2d',{willReadFrequently:true});const lum=new Map();
+function sampleCanvases(){if(document.hidden)return;for(const cv of document.querySelectorAll('canvas')){if(cv===smp||cv.id=='tutCanvas'||!cv.width||!cv.height||!cv.isConnected)continue;
+ const r=cv.getBoundingClientRect();if(area(r)<VA()*.35)continue;const cs=getComputedStyle(cv);if(cs.display=='none'||cs.visibility=='hidden'||+cs.opacity<.05)continue;
+ let d;try{sg.clearRect(0,0,8,8);sg.drawImage(cv,0,0,8,8);d=sg.getImageData(0,0,8,8).data}catch(_){continue}
+ let Ls=0,A=0,dark=0;for(let i=0;i<256;i+=4){const a=d[i+3]/255,l=(.2126*d[i]+.7152*d[i+1]+.0722*d[i+2]);Ls+=l*a;A+=a;if(a>.9&&l<18)dark++}
+ const cov=A/64,mean=Ls/64,k=cv.id||name(cv);let h=lum.get(cv);if(!h)lum.set(cv,h={v:[],t:[]});const now=performance.now();h.v.push(mean);h.t.push(now);while(h.t.length&&now-h.t[0]>2000){h.t.shift();h.v.shift()}
+ let sw=0;for(let i=1;i<h.v.length;i++)if(Math.abs(h.v[i]-h.v[i-1])>32)sw++;
+ if(sw>=5)rep('cvflash:'+k,'VISUAL','FLASHING: canvas '+k+' brightness jumped '+sw+'× in 2 s (strobing effects layer)',8000);
+ if(dark>=58&&cov>.95)rep('cvblack:'+k,'VISUAL','BLACKOUT: full-screen canvas '+k+' is painting opaque black over the game ('+Math.round(cov*100)+'% covered)',10000)}}
+
+/* ===== VISUAL 3 · frame pacing: dropped frames, stutter bursts, low FPS ===== */
+let fT=0,fN=0,fBad=0,fWorst=0,fWin=performance.now(),lowRun=0;
+function frame(t){if(!on)return;if(fT){const dt=t-fT;fN++;if(dt>100)fBad++;if(dt>fWorst)fWorst=dt}fT=t;
+ if(t-fWin>=2000){const fps=fN*1000/(t-fWin);if(!document.hidden){if(fps<30)lowRun++;else lowRun=0;
+   if(lowRun>=2)rep('fps','PERFORMANCE','Low frame rate: '+fps.toFixed(0)+' fps for '+lowRun*2+' s',20000);
+   if(fBad>=4)rep('jank','VISUAL','STUTTER: '+fBad+' frames over 100 ms in 2 s (worst '+Math.round(fWorst)+' ms), reads as flicker on screen',15000)}
+  fN=0;fBad=0;fWorst=0;fWin=t}raf=requestAnimationFrame(frame)}
+
+/* ===== VISUAL 4 · resize / viewport storms (Android toolbar collapse → relayout loop) ===== */
+const rz=[];function onResize(){const now=Date.now();rz.push(now);while(rz.length&&now-rz[0]>2000)rz.shift();
+ if(rz.length>=10)rep('rz','VISUAL','RELAYOUT LOOP: viewport resized '+rz.length+'× in 2 s ('+innerWidth+'×'+innerHeight+'), the whole layout redraws each time',10000)}
+function onCtxLost(e){rep('glost:'+name(e.target),'VISUAL','GPU context lost on '+name(e.target)+' (canvas will draw blank until restored)',5000)}
+
+/* ===== VISUAL 5 · layout: board covered, HUD overlapping the board, UI off-screen, animation budget ===== */
+const occ=new Map();
+function layout(){if(document.hidden)return;
+ try{const n=document.getAnimations?document.getAnimations().length:0;if(n>260)rep('anims','PERFORMANCE',n+' animations running at once (Android GPU budget risk: blanking / flicker)',30000)}catch(_){}
+ let paused=false;try{paused=!!(PAUSED||sty)}catch(_){}if(!inBattle()||paused){occ.clear();return}const bw=document.getElementById('bw'),bd=document.getElementById('board');if(!bw||!bd)return;const R=bd.getBoundingClientRect();if(R.width<40)return;
+ for(const[fx,fy]of[[.5,.5],[.2,.2],[.8,.8],[.2,.8],[.8,.2]]){const x=R.left+R.width*fx,y=R.top+R.height*fy;if(x<0||y<0||x>innerWidth||y>innerHeight)continue;const hit=document.elementFromPoint(x,y);
+  const pk=fx+','+fy,bad=hit&&!bw.contains(hit)&&!ownUI(hit)&&!hit.closest('.modal,#gl,#console,#tabs,#mgp,.toast,.fl,#tutorialOverlayPane,[role=dialog]');
+  if(!bad){occ.delete(pk);continue}const was=occ.get(pk);occ.set(pk,hit);if(was===hit)rep('cover:'+name(hit),'VISUAL','OCCLUDED: '+name(hit)+' is drawn on top of the board at '+Math.round(fx*100)+'%,'+Math.round(fy*100)+'%',15000)}
+ for(const id of['pcard','ecard','msb']){const el=document.getElementById(id);if(!el||el.hidden||!el.offsetParent&&id!='msb')continue;const r=el.getBoundingClientRect();if(!r.width)continue;
+  const ov=overlap(r,R);if(ov>R.width*6)rep('ovl:'+id,'VISUAL','OVERLAP: #'+id+' covers '+Math.round(ov/(R.width*R.height/49)*10)/10+' gem cells of the board',20000);
+  if(r.bottom>innerHeight+2||r.top<-2||r.right>innerWidth+2)rep('off:'+id,'VISUAL','OFF-SCREEN: #'+id+' extends past the viewport ('+Math.round(r.top)+'→'+Math.round(r.bottom)+' of '+innerHeight+'px)',30000)}}
+
+/* ===== GAMEPLAY · board integrity, stat sanity, soft-locks ===== */
+let busySince=0,emptyHits=0,zeroSince=0;
+function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S||!S.hero)return;const now=Date.now();
+ if(s.busy){if(!busySince)busySince=now;else if(now-busySince>12000&&!PAUSED)rep('soft','GAMEPLAY','SOFT-LOCK: board has been busy for '+Math.round((now-busySince)/1000)+' s (input blocked)',20000)}else busySince=0;
+ if(!inBattle())return;
+ if(!s.busy){const NN=s.N*s.N;let bad=-1,empty=0;if(s.B.length!=NN)rep('blen','GAMEPLAY','BOARD: array holds '+s.B.length+' cells, expected '+NN);
+  for(let i=0;i<NN;i++){const v=s.B[i];if(v===-1)empty++;else if(typeof v!='number'||!Number.isInteger(v)||v<0){bad=i;break}}
+  if(bad>=0)rep('bval','GAMEPLAY','BOARD: invalid gem value '+JSON.stringify(s.B[bad])+' at cell '+bad+' ('+(bad%s.N)+','+(bad/s.N|0)+')');
+  if(empty){if(++emptyHits>=2)rep('bempty','GAMEPLAY','BOARD: '+empty+' empty cell'+(empty>1?'s':'')+' left after the cascade settled (holes in the grid)')}else emptyHits=0;
+  if(vis('v-battle')){const dom=s.tiles.filter(t=>t&&t.isConnected).length;if(dom&&dom<NN)rep('tdom','VISUAL','MISSING GEMS: '+(NN-dom)+' tile element'+(NN-dom>1?'s are':' is')+' not on screen while the board is idle')}}
+ const ph=s.P&&s.P.hp,mx=(()=>{try{return stat().hp}catch(_){return 0}})();
+ if(!Number.isFinite(ph))rep('php','GAMEPLAY','STATS: hero HP is '+ph);else if(ph<0)rep('php','GAMEPLAY','STATS: hero HP below zero ('+ph+')');else if(mx&&ph>mx*1.5)rep('phx','GAMEPLAY','STATS: hero HP '+Math.round(ph)+' far above max '+Math.round(mx));
+ if(s.P&&Array.isArray(s.P.m)&&s.P.m.some(v=>!Number.isFinite(v)||v<0))rep('pm','GAMEPLAY','STATS: mana pool corrupt ['+s.P.m.join(',')+']');
+ if(s.P&&!Number.isFinite(s.P.arm))rep('parm','GAMEPLAY','STATS: shield is '+s.P.arm);
+ if(!Number.isFinite(S.gold)||S.gold<0)rep('gold','GAMEPLAY','ECONOMY: gold is '+S.gold);
+ if(s.E&&!GT){if(!Number.isFinite(s.E.hp))rep('ehp','GAMEPLAY','STATS: enemy HP is '+s.E.hp+' ('+s.E.n+')');else if(s.E.mx&&s.E.hp>s.E.mx*1.01)rep('ehx','GAMEPLAY','STATS: enemy HP '+Math.round(s.E.hp)+' above its max '+s.E.mx);
+  if(s.E.hp<=0&&!s.E.dead&&!s.busy){if(!zeroSince)zeroSince=now;else if(now-zeroSince>3000)rep('ezero','GAMEPLAY','FIGHT STUCK: '+s.E.n+' at 0 HP for '+Math.round((now-zeroSince)/1000)+' s but the victory never fired')}else zeroSince=0}
+ if(s.dead&&Number.isFinite(ph)&&ph>0)rep('ddead','GAMEPLAY','STATE: hero flagged dead with '+Math.round(ph)+' HP left')}
+
+function label(){if(btn){btn.textContent='🛰️ [DEBUG] Bug Monitor: '+(on?'ON · '+found:'OFF');btn.classList.toggle('on',on)}}
+function start(){if(on)return;on=true;try{localStorage.setItem('gg_bugmon','1')}catch(_){}
+ watchFlips();fT=0;fWin=performance.now();raf=requestAnimationFrame(frame);
+ ivs=[setInterval(sampleCanvases,150),setInterval(layout,1000),setInterval(gameplay,1000)];
+ addEventListener('resize',onResize);if(window.visualViewport)visualViewport.addEventListener('resize',onResize);document.addEventListener('webglcontextlost',onCtxLost,true);document.addEventListener('contextlost',onCtxLost,true);
+ L('INFO','Bug Monitor ON · watching flicker, flashing canvases, stutter, overlaps, board integrity and soft-locks');label()}
+function stop(){if(!on)return;on=false;try{localStorage.removeItem('gg_bugmon')}catch(_){}
+ if(mo){mo.disconnect();mo=null}cancelAnimationFrame(raf);ivs.forEach(clearInterval);ivs=[];flips.clear();lum.clear();
+ removeEventListener('resize',onResize);if(window.visualViewport)visualViewport.removeEventListener('resize',onResize);document.removeEventListener('webglcontextlost',onCtxLost,true);document.removeEventListener('contextlost',onCtxLost,true);
+ L('INFO','Bug Monitor OFF · '+found+' issue'+(found==1?'':'s')+' reported this session');label()}
+btn=DebugBar.add('bmbtn','Playtesting only: watches for screen flicker, flashing / blacked-out canvases, stutter, UI overlapping the board, broken board state, bad HP / mana / gold values and soft-locks, and files them in the Live Bug Tracker',()=>on?stop():start());label();
+/* QA Simulation brings the monitor with it */
+const Q=window.AutoplayEngine&&AutoplayEngine.QA;if(Q){const _s=Q.start;Q.start=function(){const r=_s.apply(this,arguments);start();return r};
+ const b=document.getElementById('qabtn');if(b)b.onclick=e=>{e.stopPropagation();Q.on?Q.stop():Q.start()}}
+try{if(localStorage.getItem('gg_bugmon')=='1')start()}catch(_){}
+return{start,stop,toggle:()=>on?stop():start(),get on(){return on},get found(){return found}}})();
+
 /* END PLAYTESTING DEBUG TOOLS */
 </script>
 
