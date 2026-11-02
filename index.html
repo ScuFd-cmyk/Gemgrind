@@ -6830,6 +6830,18 @@ html,body{height:var(--vvh)!important;max-height:var(--vvh)!important}
  #pcard .sk2 b{display:block;padding:0 9px;font-size:clamp(9px,2.6vw,10.5px)!important;line-height:1.12;overflow-wrap:anywhere}
  #pcard .sk2 br{display:none}
 }
+
+/* ---------- v5.7b popups on touch screens: scroll instead of the CSS-column pager ----------
+   iOS Safari fragments the flex rows of the column pager differently, so the pager measured one page and the
+   overflow painted over Begin Battle / Close. On touch screens the popup body now scrolls and its buttons stay pinned below. */
+@media (pointer:coarse),(max-width:600px){
+ .modal .pop>.pgi{height:auto!important;flex:1 1 auto!important;min-height:0!important;column-count:auto!important;columns:auto!important;transform:none!important;
+  overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 18px),transparent);padding-bottom:14px}
+ .modal .pop>.pgbar{display:none!important}
+ .modal .pop>:not(.pgi){flex:none}
+ #gl .pop{max-height:calc(var(--vvh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 16px)!important}
+}
 </style>
 <script id="v57-iphone-js">
 (()=>{
