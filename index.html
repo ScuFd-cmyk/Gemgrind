@@ -6846,6 +6846,20 @@ html,body{height:var(--vvh)!important;max-height:var(--vvh)!important}
 #v57and{display:flex;flex-direction:column;align-items:center;gap:6px;max-width:min(420px,90vw);font-size:11px;line-height:1.35;color:#c9b597}
 #v57and b{color:#f4d58c}#v57and .big2{width:100%!important;min-height:42px!important}
 @media (max-width:560px),(max-height:780px){#menu .mz>#v57and{grid-column:1/-1;justify-self:stretch;max-width:none}}
+
+/* ---------- v5.7d mobile GPU budget (touch screens only) ----------
+   Android Chrome blanked the page (only canvas effects still drew) under Autoplay: ~180 composited layers, 49 always-on
+   gem float animations each with a double drop-shadow, 49 blend-mode highlight layers, filters on every gem image.
+   Match / cascade / special-gem / hint animations are unchanged; only idle, always-running costs are removed. */
+@media (pointer:coarse){
+ .g{will-change:auto!important}
+ .g .hl{will-change:auto!important;mix-blend-mode:normal!important}
+ .g:not(.hint) .gw.gg-image-wrap{animation:none!important;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))!important}
+ .g .gg-art,.g .gg-ultimate-image .gg-art{filter:none!important}
+ .pgi,#hpi,#web,#glc,#clsw,.cstr,#petStage,#tabs{will-change:auto!important}
+ #console:not(.open) #conp{will-change:auto!important}
+ #pm,#pmp,#debugTestingConsole,#console.open{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+}
 </style>
 <script id="v57-iphone-js">
 (()=>{
