@@ -1212,7 +1212,7 @@ function achShow(){$('menu').hidden=true;const n=achPend(),b=[];if(n)b.push(['�
 const RMQ=matchMedia('(prefers-reduced-motion: reduce)'),RM=()=>!!(S.opt.rm||RMQ.matches),SPD=()=>S.opt.spd||1;
 /* combat clock: PAUSED holds every wait(); bumping BEP abandons any in-flight combat chain (restart / retreat) */
 let BEP=0,PAUSED=0,PQ=[];
-const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();try{localStorage.setItem('gg1',JSON.stringify(S))}catch(e){}if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)/(window.QAFF||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
+const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();ggLsSave();if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)/(window.QAFF||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
 let tsk=null,tsv=null;
 function tstat(){const c=C(),key=S.cls+':'+c.n.join();if(key===tsk)return tsv;const t={dodge:0,score:0,cdr:0,hp:0,mana:0,sh:0,all:0,wh:0,cd:[0,0,0,0,0,0],ks:{},quad:0,dur:0,gm:[0,0,0,0,0,0],crit:0,lsx:0,skd:0,pen:0,pot:0};
 for(const i of c.n){const o=WEB.n[i];if(!o)continue;if(o.t=='hy'){for(const q in o.s.fx)t[q]=(t[q]||0)+o.s.fx[q]}else if(o.t=='su'){const s=o.s;if(s.k=='gm')t.gm[s.c]+=s.v;else if(s.k=='all')t.all+=s.v/100;else t[s.k]+=s.v}else if(o.t=='mx')t.ks[o.m[0]]=1;else if(o.t=='mi')t[o.s[0]]+=o.s[1];else if(o.t=='ks')t.ks[o.k[0]]=1;else if(o.all)t.all+=o.all/100;else if(o.c!=null){t.cd[o.c]+=o.v/100;t.wh++}}tsk=key;return tsv=t}
@@ -2246,6 +2246,12 @@ $('mnew').onclick=()=>{if(S.hero&&!armed){armed=true;$('mnew').textContent='⚠�
 $('mhelp').onclick=()=>{$('mhelptx').hidden=!$('mhelptx').hidden};$('cback').onclick=showMenu;
 $('cgo').onclick=()=>newGame({name:$('hname').value.trim()||'Hero',cr:mk.cls,hue:HUES[mk.hi][1],lg:mk.lg,av:CL[mk.cls].i,look:AV.look({look:mkLook()}),hh:0});
 addEventListener('pagehide',save);
+/* v6.0.5 · the localStorage copy of the save is throttled: at most one JSON.stringify + setItem every 400 ms,
+   always of the latest S (IndexedDB is already coalesced by GGDB.write). Written at once when the page is hidden or unloaded. */
+var ggLsTimer=0;
+function ggLsWrite(){if(ggLsTimer){clearTimeout(ggLsTimer);ggLsTimer=0}try{localStorage.setItem('gg1',JSON.stringify(S))}catch(e){}}
+function ggLsSave(){if(document.visibilityState==='hidden'){ggLsWrite();return}if(!ggLsTimer)ggLsTimer=setTimeout(ggLsWrite,400)}
+addEventListener('pagehide',()=>{if(ggLsTimer)ggLsWrite()});
 /* offline camp rewards: evaluated by the boot sequence AFTER the save is restored, so the idle time is measured from the newest copy */
 function offlineCamp(){const m=Math.min(480,(Date.now()-S.t)/6e4);if(m>1)addXp(Math.floor(m*.5),0,2);if(m>=10&&S.hero){const n=Math.max(1,Math.min(24,Math.floor(m/20))),got=[];for(const k of['ore','log','fish']){const t=gtier(k);S.mat[k][t]+=n;got.push(MI[k]+' '+n+' '+MAT[k][t])}restNote='🏕️ While you were away ('+Math.floor(m)+' min), your camp gathered '+got.join(', ')+'.';save()}}
 /* ===== IN-BATTLE PAUSE MENU: freezes waits, VFX canvas and CSS animation; Restart / Retreat abandon the running combat chain ===== */
@@ -4517,7 +4523,7 @@ const OV=$('tutorialOverlayPane'),CV=$('tutCanvas'),G2=CV.getContext('2d'),BOX=$
 function queueTut(id){const t=ensureTut();if(t.done.includes(id)||Q.includes(id)||(TUT&&TUT.id==id))return;Q.push(id)}
 const vis=id=>{const e=$(id);return!!e&&!e.hidden};
 const safeNow=()=>hasHero()&&!TUT&&!thOn&&!busy&&!walking&&!dead&&!vis('gl')&&!vis('pm')&&!vis('itm')&&!vis('potm')&&!vis('clsm')&&!vis('menu')&&!vis('create')&&!vis('storyTheaterModal')&&!(window.GGDB&&!GGDB.status().ready);
-function showTut(id,replay){const T=PM.tutorials[id];if(!T)return;TUT={id,replay:!!replay,target:T.target};
+function showTut(id,replay){const T=PM.tutorials[id];if(!T)return;TUT={id,replay:!!replay,target:T.target};tutWake();
  $('tutTitle').textContent=T.title;$('tutKick').textContent=replay?'The Codex · Replay':'The Codex · New Entry';
  let n=0;const lines=[];$('tutText').innerHTML=T.text.split(/\n\s*\n/).map(p=>'<p>'+sentences(p).map(s=>{lines.push(stripEmo(s));return'<span data-n="'+(n++)+'">'+esc(s)+'</span>'}).join(' ')+'</p>').join('');TUT.lines=lines;
  if(!PAUSED){PAUSED=1;ownPause=1;document.body.classList.add('paused')}if(!sty){sty=true;ownSty=1}
@@ -4561,17 +4567,22 @@ GGLife.onResize(()=>{if(TUT){sizeCv();placeBox()}});
    5. 60 FPS EVALUATION LOOP (requestAnimationFrame; idles while the tab is hidden)
    ================================================================= */
 let lastPlace=0,lastEval=-1e9;
-/* the spotlight repaints every frame while a Codex entry is open; gate checks run at 4 Hz (every draw() also validates instantly) */
-function frame(ts){requestAnimationFrame(frame);if(document.hidden||!hasHero())return;
+/* v6.0.5 · the spotlight repaints every frame (requestAnimationFrame) only while a Codex entry is open;
+   otherwise the gate checks run on a 4 Hz timer, so the page can idle between frames (every draw() also validates instantly) */
+let tutRaf=0,tutTm=0;
+function tutNext(){if(tutRaf||tutTm)return;if(TUT)tutRaf=requestAnimationFrame(frame);else tutTm=setTimeout(()=>{tutTm=0;frame(performance.now())},250)}
+function tutWake(){if(!looping)return;if(tutTm){clearTimeout(tutTm);tutTm=0}if(!tutRaf)tutRaf=requestAnimationFrame(frame)}
+function frame(ts){tutRaf=0;try{tutStep(ts)}finally{tutNext()}}
+function tutStep(ts){if(document.hidden||!hasHero())return;
  if(TUT){paintCv(ts);if(ts-lastPlace>250){lastPlace=ts;placeBox()}return}
- if(ts-lastEval<250)return;lastEval=ts;ensureTut();validateProgressionLocks();
+ if(ts-lastEval<240)return;lastEval=ts;ensureTut();validateProgressionLocks();
  const t=S.tut;
  /* view / entry triggers */
  if(conOpen&&['lab','pets'].includes(conTab)){const g=PM.gates[conTab];if(gateOpen(conTab)&&!t.done.includes(g.tutorial))queueTut(g.tutorial)}
  if(vaultOn()&&curTab=='battle'&&!conOpen&&!t.done.includes('infinite_vault'))queueTut('infinite_vault');
  /* skill-slot tutorials only make sense once the bar is on screen */
  if(Q.length&&safeNow()){const i=Q.findIndex(id=>!/^slot_/.test(id)||(curTab=='battle'&&!conOpen&&!GT));if(i>=0){const id=Q.splice(i,1)[0];if(!t.done.includes(id))showTut(id)}}}
-let looping=0;const boot=()=>{ensureTut();validateProgressionLocks();if(!looping){looping=1;requestAnimationFrame(frame)}};
+let looping=0;const boot=()=>{ensureTut();validateProgressionLocks();if(!looping){looping=1;tutNext()}};
 
 /* =================================================================
    6. CODEX IN SETTINGS (replay any entry already earned)
@@ -7018,8 +7029,10 @@ cast=async function(k,who){
 
 <!-- v6.0 BAKED BALANCE PROFILE: written by the ⚖️ Balance tab (📦 Build index.html / ⬆ Push). Builds with a newer stamp replace older local slider values on every device. -->
 <script id="dbal-baked" type="application/json">{"stamp":null,"prof":[]}</script>
-<!-- PLAYTESTING DEBUG TOOLS: delete this entire <script> element to remove every debug control. Nothing else in the game references it. -->
-<script id="debug-tools">
+<!-- PLAYTESTING DEBUG TOOLS: delete this entire <script> element to remove every debug control. Nothing else in the game references it.
+     v6.0.5: inert by default (type="text/plain"). The loader right after it runs it only in debug mode:
+     open the game once with ?debug=1 (remembered on this device), ?debug=0 turns it off again. -->
+<script id="debug-tools" type="text/plain">
 /* PLAYTESTING DEBUG TOOLS */
 /* Autoplay bot + Auto-Continue + Auto-Retry. Self-contained: it only reads game globals and wraps win()/die() from the outside. */
 /* Hidden collapsible console #debugTestingConsole: toggled by the tiny cog in the bottom-left corner, or the ` (backtick) / F2 keys. Esc closes it.
@@ -8025,6 +8038,17 @@ if(window.QARec){const r0=QARec.report;QARec.report=function(){const r=r0.apply(
 return{analyse,suggest,paint,get sources(){return src},get suggestions(){return sugg}}})();
 
 /* END PLAYTESTING DEBUG TOOLS */
+</script>
+<script id="debug-loader">
+/* v6.0.5 · debug-mode switch. Off: the debug console, autoplay/QA bots, bug monitor and their timers never load.
+   Only the baked ⚖️ balance profile is still applied (a read-only window.DBAL), so players get the same balance either way. */
+(()=>{let on=false;try{const q=new URLSearchParams(location.search).get('debug');if(q!=null)localStorage.setItem('gg_debug',q==='0'||q==='off'?'0':'1');on=localStorage.getItem('gg_debug')==='1'}catch(e){}
+ if(on){const src=document.getElementById('debug-tools'),s=document.createElement('script');s.id='debug-tools-live';s.textContent=src.textContent;src.after(s);return}
+ try{let prof=null;const el=document.getElementById('dbal-baked'),b=el&&JSON.parse(el.textContent||'{}');let o=null;try{o=JSON.parse(localStorage.getItem('gg_dbal')||'null')}catch(_){}
+  /* same choice the Balance tab makes: a newer baked build wins, otherwise the sliders saved on this device */
+  if(b&&b.stamp&&Array.isArray(b.prof)&&(!o||o.base!==b.stamp))prof=b.prof;else if(o&&Array.isArray(o.prof))prof=o.prof;
+  if(!prof||!prof.some(p=>p&&typeof p=='object'&&Object.keys(p).length))return;
+  window.DBAL={m(k){const d=(window.S&&Number.isInteger(S.diff))?S.diff:2,p=prof[d],v=p&&p[k];return v>=1&&v<=100&&v!=50?1+(v-50)/100:1}}}catch(e){}})();
 </script>
 
 
