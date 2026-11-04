@@ -1027,6 +1027,8 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    code after, so they are now plain hooks: onDraw(f) / onHud(f) register them, and the runner calls them after the base body,
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
+/* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
+const GG_VERSION='6.1.0';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -5581,7 +5583,7 @@ async function boot(){const T0=performance.now();
  document.documentElement.classList.remove('gg-boot');
  lap('render');
  GameWakeLockManager.requestWakeLock();
- tlog('PERFORMANCE','v6.0.4 boot complete in '+Math.round(performance.now()-T0)+'ms ('+steps.join(' · ')+') · '+M.length+' continents, '+a41.unique+' unique foes, '+Object.keys(a48.archetypes).length+' silhouettes · voices '+(voices?VC.list.length:'unavailable'));
+ tlog('PERFORMANCE','v'+GG_VERSION+' boot complete in '+Math.round(performance.now()-T0)+'ms ('+steps.join(' · ')+') · '+M.length+' continents, '+a41.unique+' unique foes, '+Object.keys(a48.archetypes).length+' silhouettes · voices '+(voices?VC.list.length:'unavailable'));
  window.GGBoot.done=true}
 
 function run(){if(booted)return;booted=true;
@@ -7534,7 +7536,7 @@ return{start,stop,flag:flagNow,audit,toggle:()=>on?stop():start(),get on(){retur
      and the full combat state are stored (last 15) for the export.
    - Export: one JSON report with device info, both sessions, crumbs, snapshots, save summary and telemetry.
    ===================================================================== */
-window.QARec=(()=>{const VER='6.0.4',KEEP=2500,MIRROR=60,SNAPS=15,CRUMBS=40,ISSUE=new Set(['ERROR','GLITCH','VISUAL','GAMEPLAY']);
+window.QARec=(()=>{const VER=GG_VERSION,KEEP=2500,MIRROR=60,SNAPS=15,CRUMBS=40,ISSUE=new Set(['ERROR','GLITCH','VISUAL','GAMEPLAY']);
 const now=()=>Date.now(),T0=now(),sid=String(T0);
 const sess={id:sid,v:VER,start:T0,end:0,clean:0,entries:[],snaps:[]};let prev=[],dirty=0,snapN=0;const crumbs=[];
 /* ---------- tiny IndexedDB key/value store, separate from the game save ---------- */

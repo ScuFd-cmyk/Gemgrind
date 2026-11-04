@@ -22,6 +22,7 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
   - run `node tools/balance-sim.js` (needs Playwright + Chromium). If a change moves balance on purpose, re-run with `--update-baseline` and commit the new baseline in the same commit.
   - smoke-test in a browser with **no flag** and with **`?debug=0`**: no `pageerror`s, a new hero can fight, win and lose, saving survives a reload, and the debug cog is shown by default and hidden with `?debug=0`.
 - **Debug console:** on by default during playtesting. The cog (bottom-left), `` ` `` or F2 toggles the console, which has Autoplay, Auto-Continue, Auto-Retry, QA Simulation, Bug Monitor, 📐 Balance sim and the ⚖️ Balance tab. It stays until final release; for release set `DEBUG_DEFAULT=false`. Use Autoplay + Auto-Continue + Auto-Retry for long regression soaks.
+- **Version:** bump `GG_VERSION` (top of the base script) for every upload; it appears in the boot log and in every QA export, so bug reports name their build.
 - **Deploy:** upload `index.html`, the `assets/` folder, `sw.js`, `manifest.webmanifest` and the icons together. `sw.js` is stale-while-revalidate: the game opens from the cache instantly (also offline), re-checks `index.html` in the background, and when a newer upload is found the page shows "✨ New version ready · tap to reload". It precaches every `assets/…` file that `index.html` references (no list to maintain) and prunes unused ones. Any other new file that must work offline goes in `CORE` in `sw.js`, with `CACHE` bumped.
 
 ## Files
