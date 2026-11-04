@@ -9,16 +9,17 @@ There is no build step, package manager or bundler. The game is static files.
 ```bash
 python3 -m http.server 8765                      # serve the repo root
 # play:   http://localhost:8765/index.html
-# debug:  http://localhost:8765/index.html?debug=1   (remembered per device; ?debug=0 turns it off)
+# debug menu is ON by default until release (DEBUG_DEFAULT in <script id="debug-loader">); ?debug=0 / ?debug=1 override per device
+node tools/balance-sim.js                     # balance harness: model every difficulty × continent, fail on drift vs the baseline
+node tools/balance-sim.js --update-baseline   # accept intended balance changes (commit tools/balance-baseline.json)
+node tools/balance-sim.js --targets=tools/balance-targets.json --strict   # check design targets
 node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-check the service worker
 ```
 
-- **Tests:** there is no automated suite yet. Before pushing, smoke-test in a browser (Playwright is the usual tool) with **no flag** and with **`?debug=1`**. Check that:
-  - there are no `pageerror`s
-  - a new hero can fight, win and lose
-  - saving survives a reload
-  - the debug cog only appears with `?debug=1`
-- **Debug console:** with `?debug=1`, the `` ` `` or F2 key toggles the console, which has Autoplay, Auto-Continue, Auto-Retry, QA Simulation, Bug Monitor and the ⚖️ Balance tab. Use Autoplay + Auto-Continue + Auto-Retry for long regression soaks.
+- **Tests:** there is no gameplay test suite yet. Before pushing:
+  - run `node tools/balance-sim.js` (needs Playwright + Chromium). If a change moves balance on purpose, re-run with `--update-baseline` and commit the new baseline in the same commit.
+  - smoke-test in a browser with **no flag** and with **`?debug=0`**: no `pageerror`s, a new hero can fight, win and lose, saving survives a reload, and the debug cog is shown by default and hidden with `?debug=0`.
+- **Debug console:** on by default during playtesting. The cog (bottom-left), `` ` `` or F2 toggles the console, which has Autoplay, Auto-Continue, Auto-Retry, QA Simulation, Bug Monitor, 📐 Balance sim and the ⚖️ Balance tab. It stays until final release; for release set `DEBUG_DEFAULT=false`. Use Autoplay + Auto-Continue + Auto-Retry for long regression soaks.
 - **Deploy:** upload `index.html`, `sw.js`, `manifest.webmanifest` and the icons together. `sw.js` is network-first, so online players always get the newest `index.html`. If you add a file that must work offline, add it to `FILES` in `sw.js` and bump `CACHE`.
 
 ## Files
@@ -30,6 +31,9 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
 | `manifest.webmanifest` | PWA manifest (fullscreen, any orientation). |
 | `icon-*.png` | PWA icons. |
 | `AUDIT_REPORT.md` | The latest balance, security and performance audit, with fix diffs. |
+| `tools/balance-sim.js` | Balance harness CLI (Node + Playwright). Drives `window.GGBalance` in the real page. |
+| `tools/balance-baseline.json` | Recorded harness output, one fight per line; the drift check compares against it. |
+| `tools/balance-targets.example.json` | Template for design targets (placeholder numbers). |
 
 ## Architecture (`index.html`)
 
@@ -39,7 +43,8 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
   const _draw=draw;draw=function(){const r=_draw.apply(this,arguments);try{mySync()}catch(e){}return r};
   ```
   Later layers run *outside* earlier ones. Before changing a function, grep for every `_name=name` wrapper of it (`draw`, `drawHud`, `stat`, `newEnemy`, `syncBoard`, `win`, `die` and `renderCls` each have several).
-- **`debug-tools`:** `<script id="debug-tools" type="text/plain">`. It's inert, and the `debug-loader` after it runs it only in debug mode. With debug off, the loader provides a read-only `window.DBAL` so the baked balance profile still applies. Nothing outside the block may *require* debug globals; always check first (`window.logDebugIssue&&…`).
+- **`debug-tools`:** `<script id="debug-tools" type="text/plain">`. It's inert, and the `debug-loader` after it runs it when debug is on (default during playtesting, `DEBUG_DEFAULT`). While `window.GG_SIM` is set, its hooks pass straight through.
+- **`v606-balance-harness`:** `window.GGBalance.run(opts)` swaps `S`/`E`/`P` and the combat flags for clones, seeds `Math.random`, runs the real `newEnemy()`/`stat()`/`heal()`/`genItem()` synchronously, and restores everything. It must stay read-only: never call `save()`, `draw()` or `win()`/`die()` from it. It lives outside `debug-tools` so the CLI keeps working after release. With debug off, the loader provides a read-only `window.DBAL` so the baked balance profile still applies. Nothing outside the block may *require* debug globals; always check first (`window.logDebugIssue&&…`).
 - **Core globals:**
 
   | Global | Holds |
@@ -111,4 +116,4 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
 - **Fight transitions:** a combat chain belongs to one enemy. `resolve()` and `swap()` pin it as `E0` and stop as soon as `E !== E0` (a victory screen's Continue can replace `E` mid-cascade; `settle()` then deals the new board). Keep those checks after every `await` in the cascade loop (audit W1).
 - **No free heals:** UI actions (class switch, menus) must never raise the hero's HP fraction. A class switch keeps the HP fraction, and during a live fight also armor, ailments and the Phoenix flag (audit C1).
 
-**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Fixed: C1, W1, W3, W4. Still open: W2 (needs a balance harness and a design decision) and L1–L8.
+**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Fixed: C1, W1, W3, W4. Still open: W2 (the harness exists; the curve and targets are a design decision) and L1–L8.

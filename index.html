@@ -3988,7 +3988,7 @@ pvDraw=function(){_pd2();const p=PV;if(!p||!p.cm||p.act=='gather')return;const w
 function audit(){const MATRIX=buildMatrix(),all=MATRIX.flatMap(c=>c.roster),uniq=new Set(all),curve=[];for(let c=0;c<50;c++)curve.push([+campaignStatModifier(c,0).toFixed(3),+campaignStatModifier(c,20).toFixed(3)]);
  return{continents:MATRIX.length,perContinent:MATRIX.every(c=>c.roster.length===PER),total:all.length,unique:uniq.size,
   firstCity:campaignStatModifier(0,0),finalSanctum:+campaignStatModifier(49,20).toFixed(3),actVPastEight:campaignStatModifier(45,0)>8,curve}}
-window.GG41={MATRIX:null,build:buildMatrix,generateGlobalCampaignMatrix,campaignStatModifier,cityRoster,audit,rewardMul};
+window.GG41={MATRIX:null,build:buildMatrix,generateGlobalCampaignMatrix,campaignStatModifier,cityRoster,audit,rewardMul,baseYield};
 
 })();
 </script>
@@ -4414,7 +4414,7 @@ function annotate(M){for(const c of M||[]){const ci=c.continent-1;const[lo,hi]=l
  Object.defineProperties(c,{levelMin:{value:lo,configurable:true},levelMax:{value:hi,configurable:true},levelBracket:{value:[lo,hi],configurable:true},cityLevel:{value:j=>campaignEnemyLevel(ci,j),configurable:true}})}return M}
 if(window.GG41){annotate(GG41.MATRIX);const g=GG41.generateGlobalCampaignMatrix;GG41.generateGlobalCampaignMatrix=function(){return annotate(g.apply(this,arguments))};GG41.campaignEnemyLevel=campaignEnemyLevel;GG41.levelBracket=levelBracket}
 window.generateGlobalCampaignMatrix=(...a)=>window.GG41?GG41.generateGlobalCampaignMatrix(...a):[];
-window.campaignEnemyLevel=campaignEnemyLevel;
+window.campaignEnemyLevel=campaignEnemyLevel;window.levelTier=levelTier;/* v6.0.6 · exported for the balance harness */
 
 const vaultOn=()=>!!(window.GG40&&GG40.vOn&&GG40.vOn());
 const campaignActive=()=>!GT&&!!S.cm&&!vaultOn()&&!!E&&!!cur();
@@ -7038,6 +7038,79 @@ cast=async function(k,who){
 }catch(e){console.error('[Gemgrind v6.0.4] skill library',e)}})();
 </script>
 
+<script id="v606-balance-harness">
+/* =====================================================================
+   v6.0.6 · BALANCE HARNESS (audit W2)
+   window.GGBalance.run(opts) fights the game's own newEnemy() / stat() / heal() / genItem() / eBlock()
+   against a modelled hero and returns one row per sampled fight. It never touches the real game:
+   the save S, enemy E, player P and the busy/dead/gathering flags are swapped for clones and restored,
+   the debug hooks pass straight through (window.GG_SIM), newBoard() is deferred, Math.random is seeded,
+   and the run is synchronous, so no timer, save or draw can run in between.
+   Model (keep in sync with AUDIT_REPORT.md W2):
+   · build 'bare'   : a fresh hero of opts.cls at the level reached by doing only the required fights
+                      (every city's fights + its guardian, no extra grinding), all-opts.gearRarity gear of
+                      that level, no passives / research / pets / synergies / NG. 'current': your own hero as-is.
+   · each player turn matches opts.skulls skulls at combo opts.combo (enemy: opts.enemyCombo), expected crit,
+     enemy block, dodge and armor as the game applies them; enraged guardians double their skulls.
+   · powerNeeded = how much the excluded systems (passives, skills, research, pets, keystones) must multiply
+     the modelled damage for that fight to be won before the hero falls (<= 1 means it is already winnable).
+   CLI: node tools/balance-sim.js   ·   debug console: 📐 Balance sim
+   ===================================================================== */
+window.GGBalance=(()=>{
+const DEF={diffs:[0,1,2,3,4],nodes:'sample',build:'bare',cls:'Warrior',skulls:3,combo:1.3,enemyCombo:1.2,gearRarity:2,seed:7,ng:0};
+const prng=s=>{s=(s|0)%2147483646+1;return()=>(s=(s*16807)%2147483647)/2147483647};
+const clone=o=>JSON.parse(JSON.stringify(o));
+/* hero level on arrival at each node's first city fight (reg) and at its guardian (boss): XP from the required fights only.
+   Win XP = GG41.baseYield() formula × rewardMul(cmod); non-guardian fights count elites (22% at ×1.5) as ×1.11. */
+function levelCurve(di){const d=DIFF[di],out=[];let L=1,x=0;const add=v=>{x+=v;while(x>=need(L)){x-=need(L);L++}};
+ for(let i=0;i<TOTAL;i++){const w=node(i),lv=window.campaignEnemyLevel(w.ci,w.j),k=GG41.rewardMul(GG41.campaignStatModifier(w.ci,w.j)),o={reg:L,boss:L};
+  for(let f=0;f<=w.g;f++){const boss=f==w.g,s=window.levelTier(lv)+(boss?2:0);if(boss)o.boss=L;add(Math.floor(15*s*(1+s*.15)*d.r*(boss?1:1.11))*k)}
+  out.push(o)}return out}
+function pickNodes(m){if(Array.isArray(m))return m.filter(i=>i>=0&&i<TOTAL).map(i=>({i,boss:true}));const r=[];
+ for(let c=0;c*21<TOTAL;c++){const city=c*21+9,sanc=c*21+20;
+  if(m=='all'){for(let j=0;j<=20&&c*21+j<TOTAL;j++)r.push({i:c*21+j,boss:true})}
+  else if(m=='guardians'){if(sanc<TOTAL)r.push({i:sanc,boss:true})}
+  else{if(city<TOTAL){r.push({i:city,boss:false},{i:city,boss:true})}if(sanc<TOTAL)r.push({i:sanc,boss:true})}}return r}
+function prep(base,o){const x=clone(base);x.cls=o.cls;x.cm=1;x.route='map';x.done=0;if(x.vault)x.vault.on=0;if(x.ng)x.ng.t=0;
+ if(o.build=='bare'){const d0=defs();for(const k of Object.keys(d0))if(k!='opt')x[k]=clone(d0[k]);for(const k in x.c){const c=x.c[k];c.l=1;c.x=0;c.n=[]}x.syn=[];if(x.pets)x.pets.eq=null;x.eq={}}
+ return x}
+function fight(di,n,L,o,R){const w=node(n.i);S.diff=di;if(S.ng)S.ng.t=di==4?(o.ng|0):0;S.at=S.loc=n.i;S.k=n.boss?w.g:0;
+ if(o.build=='bare'){const c=S.c[o.cls];c.l=L;c.x=0;c.n=[];S.eq={};for(const sl of SLOT4)S.eq[sl]=genItem(L,sl,o.gearRarity,R)}
+ newEnemy();heal();
+ const st=stat(),d=D(),enrAt=15+LV('pvt'),crit=1+Math.min(1,st.crit||0)*(1.75*BX('crit')-1);
+ const pT=st.atk*.8*o.skulls*o.combo*st.skd*d.sk*(st.ks.splash?1.25:1)*BX('skull_p')*st.dmg*crit*BX('all_p')*(1-eBlock());
+ const eT=st.ks.iron?0:E.at*.6*o.skulls*o.enemyCombo*d.sk*BX('skull_e')*d.ed*BX('all_e')*(1-Math.min(.35,st.dodge||0));
+ const eHP=E.mx+Math.max(0,E.arm||0),pool0=Math.max(1,P.hp)+Math.max(0,P.arm),ttk=Math.ceil(eHP/Math.max(1e-9,pT));
+ let t=0,pool=pool0;if(eT>0){while(pool>0&&t<9999){t++;pool-=eT*(E.boss&&t>enrAt?2:1)}}else t=9999;
+ const y=GG41.baseYield(),xp=Math.round(y.x*GG41.rewardMul(E.cmod||1)*(y.xm||1));
+ return{diff:d.n,node:n.i,cont:w.ci+1,city:w.j>=20?'Sanctum':w.j+1,fight:n.boss?(w.B?'continent guardian':'city guardian'):'city fight',
+  heroLv:C().l,enemyLv:E.lvl||null,enemyHP:E.mx,enemyShield:Math.round(E.arm||0),enemyAtk:Math.round(E.at),heroHP:Math.round(P.hp),heroArmor:Math.round(P.arm),heroAtk:Math.round(st.atk),
+  dmgPerTurn:Math.round(pT),dmgTakenPerTurn:Math.round(eT),turnsToKill:ttk,turnsSurvived:t,enrageTurn:n.boss?enrAt+1:null,
+  win:ttk<=t,beatsEnrage:n.boss?ttk<=enrAt+1:null,powerNeeded:+(eHP/(pT*Math.min(t,9999))).toFixed(3),xpPerWin:xp}}
+function run(opts){const o=Object.assign({},DEF,opts||{});
+ if(busy)throw new Error('the board is busy: run the balance sim between moves');
+ if(window.GG52&&GG52.live&&GG52.live())throw new Error('leave the Challenge first');
+ if(!S.hero)throw new Error('create a hero first');
+ const keep={S,E,P,busy,bq,dead,GT,MR:Math.random},rows=[],R=prng(o.seed),t0=performance.now();
+ try{window.GG_SIM=1;busy=true;GT=null;dead=false;Math.random=R;const base=clone(S);
+  for(const di of o.diffs){S=prep(base,o);P=clone(keep.P);const cur=o.build=='bare'?levelCurve(di):null;
+   for(const n of pickNodes(o.nodes)){const L=cur?(n.boss?cur[n.i].boss:cur[n.i].reg):C().l;rows.push(fight(di,n,L,o,R))}}}
+ finally{S=keep.S;E=keep.E;P=keep.P;busy=keep.busy;bq=keep.bq;dead=keep.dead;GT=keep.GT;Math.random=keep.MR;window.GG_SIM=0}
+ const res={opts:o,ms:Math.round(performance.now()-t0),rows,summary:summary(rows)};api.last=res;return res}
+/* per difficulty: where the model first loses a guardian / first needs more than enrage allows, and the peak power needed */
+function summary(rows){const out={};for(const r of rows){const s=out[r.diff]||(out[r.diff]={fights:0,firstLoss:null,firstEnrageWall:null,maxPowerNeeded:0,at:null});s.fights++;
+ if(!r.win&&!s.firstLoss)s.firstLoss='C'+r.cont+' '+r.fight+' (node '+r.node+')';if(r.beatsEnrage===false&&!s.firstEnrageWall)s.firstEnrageWall='C'+r.cont+' '+r.fight+' (node '+r.node+')';
+ if(r.powerNeeded>s.maxPowerNeeded){s.maxPowerNeeded=r.powerNeeded;s.at='C'+r.cont+' '+r.fight}}return out}
+function csv(rows){if(!rows||!rows.length)return'';const k=Object.keys(rows[0]);return[k.join(',')].concat(rows.map(r=>k.map(x=>r[x]==null?'':String(r[x]).replace(/,/g,';')).join(','))).join('\n')}
+/* debug console button: runs the default sample, logs one BALANCE line per difficulty, copies the CSV */
+function console1(){try{const r=run();for(const k in r.summary){const s=r.summary[k];if(window.logDebugIssue)logDebugIssue('BALANCE','📐 Sim '+k+': first loss '+(s.firstLoss||'none')+' · first enrage wall '+(s.firstEnrageWall||'none')+' · peak power needed ×'+s.maxPowerNeeded.toFixed(2)+' ('+s.at+')')}
+ const L=t=>{if(window.logDebugIssue)logDebugIssue('INFO','📐 Balance sim: '+r.rows.length+' fights in '+r.ms+' ms · '+t+' · full result in GGBalance.last')};
+ try{navigator.clipboard.writeText(csv(r.rows)).then(()=>L('CSV copied to the clipboard'),()=>L('clipboard blocked: GGBalance.csv(GGBalance.last.rows) gives the CSV'))}catch(_){L('no clipboard: GGBalance.csv(GGBalance.last.rows) gives the CSV')}}
+ catch(e){if(window.logDebugIssue)logDebugIssue('ERROR','Balance sim failed: '+e.message)}}
+const hook=()=>{try{if(window.DebugBar&&!document.getElementById('balsim'))DebugBar.add('balsim','📐 Balance sim (audit W2): models every difficulty and continent, copies a CSV',console1).textContent='📐 [DEBUG] Balance sim'}catch(e){}};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else setTimeout(hook,0);
+const api={run,summary,csv,levelCurve,defaults:DEF,last:null};return api})();
+</script>
 <!-- v6.0 BAKED BALANCE PROFILE: written by the ⚖️ Balance tab (📦 Build index.html / ⬆ Push). Builds with a newer stamp replace older local slider values on every device. -->
 <script id="dbal-baked" type="application/json">{"stamp":null,"prof":[]}</script>
 <!-- PLAYTESTING DEBUG TOOLS: delete this entire <script> element to remove every debug control. Nothing else in the game references it.
@@ -7516,7 +7589,7 @@ const fights=[],nodes={},econ=[];let cur=null,fid=0;
 const rnd=v=>Math.round(v||0),sec=ms=>Math.round(ms/100)/10;
 const manaSum=()=>{try{return P.m.reduce((a,b)=>a+(+b||0),0)}catch(_){return 0}};
 const hpArm=()=>{try{return(+P.hp||0)+(+P.arm||0)}catch(_){return 0}};
-const wrap=(name,before,after)=>{try{const f=eval(name);if(typeof f!='function')return;const w=function(){let c;try{c=before&&before.apply(this,arguments)}catch(_){}const r=f.apply(this,arguments);
+const wrap=(name,before,after)=>{try{const f=eval(name);if(typeof f!='function')return;const w=function(){if(window.GG_SIM)return f.apply(this,arguments);/* v6.0.6 · balance harness runs are not real fights */let c;try{c=before&&before.apply(this,arguments)}catch(_){}const r=f.apply(this,arguments);
  if(after){if(r&&typeof r.then=='function')return r.then(v=>{try{after(c,v)}catch(_){}return v});try{after(c,r)}catch(_){}}return r};eval(name+'=w')}catch(e){console.warn('[QATele] wrap '+name,e)}};
 
 /* ---------- fight lifecycle ---------- */
@@ -8052,8 +8125,11 @@ return{analyse,suggest,paint,get sources(){return src},get suggestions(){return 
 </script>
 <script id="debug-loader">
 /* v6.0.5 · debug-mode switch. Off: the debug console, autoplay/QA bots, bug monitor and their timers never load.
-   Only the baked ⚖️ balance profile is still applied (a read-only window.DBAL), so players get the same balance either way. */
-(()=>{let on=false;try{const q=new URLSearchParams(location.search).get('debug');if(q!=null)localStorage.setItem('gg_debug',q==='0'||q==='off'?'0':'1');on=localStorage.getItem('gg_debug')==='1'}catch(e){}
+   Only the baked ⚖️ balance profile is still applied (a read-only window.DBAL), so players get the same balance either way.
+   v6.0.6 · DEBUG_DEFAULT: the debug menu is ON for every playtester until final release (general playtesting + bug reports).
+   For the release build set DEBUG_DEFAULT=false: then only ?debug=1 turns it on. ?debug=0 / ?debug=1 override it per device. */
+const DEBUG_DEFAULT=true;
+(()=>{let on=DEBUG_DEFAULT;try{const q=new URLSearchParams(location.search).get('debug');if(q!=null)localStorage.setItem('gg_debug',q==='0'||q==='off'?'0':'1');const v=localStorage.getItem('gg_debug');if(v==='1')on=true;else if(v==='0')on=false}catch(e){}
  if(on){const src=document.getElementById('debug-tools'),s=document.createElement('script');s.id='debug-tools-live';s.textContent=src.textContent;src.after(s);return}
  try{let prof=null;const el=document.getElementById('dbal-baked'),b=el&&JSON.parse(el.textContent||'{}');let o=null;try{o=JSON.parse(localStorage.getItem('gg_dbal')||'null')}catch(_){}
   /* same choice the Balance tab makes: a newer baked build wins, otherwise the sliders saved on this device */

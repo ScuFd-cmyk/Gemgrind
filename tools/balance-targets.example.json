@@ -1,0 +1,8 @@
+{
+  "_comment": "Design targets for tools/balance-sim.js --targets=... (copy to balance-targets.json and edit). Each rule filters rows by diff / fight / continent range, then checks them. powerNeeded = how much passives, skills, research, pets and keystones must multiply the bare hero's modelled damage to win that fight; mustBeatEnrage = the bare hero must kill the guardian before it enrages. These numbers are placeholders, not decisions.",
+  "rules": [
+    { "diff": "Normal", "fight": "continent guardian", "fromCont": 1,  "toCont": 10, "maxPowerNeeded": 2,  "why": "Act I should be beatable with a few passives" },
+    { "diff": "Normal", "fight": "continent guardian", "fromCont": 11, "toCont": 50, "maxPowerNeeded": 8,  "why": "late acts lean on the build, but within reach" },
+    { "diff": "Normal", "fight": "city fight",                                         "maxPowerNeeded": 1.5, "why": "regular fights stay grindable" }
+  ]
+}
