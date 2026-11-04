@@ -15,7 +15,9 @@ Line numbers refer to `index.html` at that commit.
 
 ## Status (2026-11-04)
 
-**Fixed in v6.0.5:** C1, W1, W3, W4. Each was re-tested against the pre-fix build in a running game; the before/after results are listed under each finding. **Still open:** W2 and L1–L8.
+**Fixed in v6.0.5:** C1, W1, W3, W4. Each was re-tested against the pre-fix build in a running game; the before/after results are listed under each finding. 
+
+**Fixed in v6.0.6:** L1–L8, each re-tested in a running game (results under "v6.0.6 Low fixes" below). **Still open:** W2 (the balance harness exists; curve and targets are a design decision).
 
 ## Severity summary
 
@@ -26,14 +28,14 @@ Line numbers refer to `index.html` at that commit.
 | W2 | **Warning** | Late-campaign enemy HP grows roughly cubically against a linear player base; boss enrage at turn 16 becomes a wall | 📐 Modelled |
 | W3 | **Warning** | Consolation purse can out-earn winning per turn in the late game (fail-farming) | 📐 Modelled + 🔍 · **Fixed** |
 | W4 | **Warning** | An enemy Catalyst+Catalyst wipe ignores the enemy's halved combo slope (flat ×5), stacking to ×20 on enraged Grindmaster bosses | 🔍 Static · **Fixed** |
-| L1 | Low | Day/night "+25% yield" is a flat +0.25 item per gem, diluted by combo | 🔍 Static |
-| L2 | Low | Infinite Vault scales enemy HP *and* attack by 1.15^wave (exponential, no cap) | 🔍 Static |
-| L3 | Low | Boss tactic clock: Stun pauses the 3-turn clock, Freeze advances it (inconsistent) | 🔍 Static |
-| L4 | Low | The "Barren Emeralds" challenge rule changes the board inside `syncBoard()` (a render function) | 🔍 Static |
-| L5 | Low | Save import doesn't clamp level / most numbers (`c.l = 99999` accepted) | ✅ Verified |
-| L6 | Low | Debug GitHub token is stored in plain text in `localStorage` | 🔍 Static |
-| L7 | Low | Per-cascade allocations: `groups()` / `find()` Sets and Maps, one new `<button>` per refilled gem | 🔍 Static |
-| L8 | Low | Reload during a fight discards the fight (fresh enemy, full HP), an escape hatch from a losing fight | 🔍 Static |
+| L1 | Low | Day/night "+25% yield" is a flat +0.25 item per gem, diluted by combo | 🔍 Static · **Fixed** |
+| L2 | Low | Infinite Vault scales enemy HP *and* attack by 1.15^wave (exponential, no cap) | 🔍 Static · **Fixed** |
+| L3 | Low | Boss tactic clock: Stun pauses the 3-turn clock, Freeze advances it (inconsistent) | 🔍 Static · **Fixed** |
+| L4 | Low | The "Barren Emeralds" challenge rule changes the board inside `syncBoard()` (a render function) | 🔍 Static · **Fixed** |
+| L5 | Low | Save import doesn't clamp level / most numbers (`c.l = 99999` accepted) | ✅ Verified · **Fixed** |
+| L6 | Low | Debug GitHub token is stored in plain text in `localStorage` | 🔍 Static · **Fixed** |
+| L7 | Low | Per-cascade allocations: `groups()` / `find()` Sets and Maps, one new `<button>` per refilled gem | 🔍 Static · **Fixed** |
+| L8 | Low | Reload during a fight discards the fight (fresh enemy, full HP), an escape hatch from a losing fight | 🔍 Static · **Fixed** |
 
 **Checked and found sound** (no action needed):
 - **Cascade loop is bounded:** it is a `for` loop capped at 80 steps (`guard<80`), not recursion.
@@ -346,4 +348,27 @@ At 49 cells this measured fine: `hintMove` takes about 0.2 ms. If cascade stutte
 
 1. ~~C1~~, ~~W1~~, ~~W4~~, ~~W3~~: fixed in v6.0.5.
 2. ~~Build the balance harness~~ (done, v6.0.6). Next: calibrate it from playtest logs, set targets, then tune W2.
-3. The Lows, opportunistically.
+3. ~~The Lows~~: fixed in v6.0.6.
+
+
+---
+
+## v6.0.6 Low fixes (2026-11-04)
+
+Each fix was checked in headless Chromium, against the pre-fix build where that's meaningful.
+
+| # | Fix | Before → after |
+|---|---|---|
+| L1 | The sky bonus and Botanical research are now a share of the haul: `yb(m,q)` scales with the combo quantity `q`. | Bloodmoon bonus on a 4-item haul: +0.25 → +1.0 items (a real +25%) |
+| L2 | One shared `VMUL(wave)` for vault enemy stats and vault rewards, capped at 1e12 so numbers stay finite. The curve is unchanged: enemies and loot both grow ×1.15 per wave (plus ×1.5 loot per breached door), which is the intended push-your-luck wall. | Vault enemies at waves 1 / 10 / 40 identical to before |
+| L3 | `E.tc++` moved below the Freeze check, so Freeze pauses the boss tactic clock exactly like Stun. | Tactic clock on a frozen turn: 0 → 1 before, stays 0 now |
+| L4 | All random mid-fight gems (cascade refill, Thawing Rune) come from `refillGem()`; Barren Emeralds overrides it instead of rewriting the board inside `syncBoard()`. | 0 Emeralds in 5,000 refills under the rule; `syncBoard()` no longer changes `B` |
+| L5 | `migrate()` clamps class level ≤ 9999, forge levels 0–`FMAX` (15), potion counts 0–9999 and the travel clock ≥ 0. | Import of level 99999, forge 10⁹ / −2, potions 10⁹ / −4, travel −9 → 9999, 15 / 0, 9999 / 0, 0 |
+| L6 | The debug GitHub token is stored apart from the settings: session-only by default, kept on the device only with "Remember token on this device". A token saved by an older build moves to the remembered slot. | Settings no longer contain the token; the legacy token was moved |
+| L7 | `tryMoves()` skips swaps that can't form a line through either swapped cell before running the callback's full `find()` / `groups()` (unless the board already has a match). Tile pooling was not done: at 49 cells the DOM churn measured fine and pooling would touch every fall/spawn animation. | Same move lists on 300 random boards with rocks and frozen cells; search 46 → 12 µs per board |
+| L8 | `save()` records the hero's HP fraction (`S.fhp`; 1 after a defeat), and boot re-applies it after `heal()`. A reload is no longer a free heal. | Reload at 30% HP: → 100% before, stays 30% now; after a defeat: fresh 100% |
+
+**Regression checks:**
+- `node tools/balance-sim.js`: no drift (750 fights).
+- No page errors with no flag or with `?debug=0`; a new hero can win and lose.
+- Debug autoplay soak: no errors. The occasional "board stalemate → reshuffle" note also appears on the pre-fix build.

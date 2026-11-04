@@ -68,7 +68,7 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
   - `BX(k)` returns a balance multiplier.
 - **Render:** `draw()` → `drawHud()` + `VR[curTab]()` + hooks. `syncBoard()` diffs the tiles. Keep `draw()` free of layout reads; schedule them with `requestAnimationFrame` (see the v60 `fitSoon`).
 - **Combat timing:** combat chains are `async` and use `await wait(ms)`, never raw `setTimeout`. `wait()` respects game speed, holds while `PAUSED`, and parks abandoned chains when `abortCombat()` bumps `BEP`.
-- **Saving:** `save()` writes `localStorage.gg1` (throttled to 400 ms, flushed on hide or `pagehide`) plus IndexedDB through `GGDB.write()`. The board, `E` and `P` are not saved; a reload starts a fresh fight. Add any new persistent field to `S`, give it a default, and validate it in `migrate()`.
+- **Saving:** `save()` writes `localStorage.gg1` (throttled to 400 ms, flushed on hide or `pagehide`) plus IndexedDB through `GGDB.write()`. The board and `E` are not saved; a reload starts a fresh fight, but `S.fhp` (the hero's HP fraction, 1 after a defeat) is re-applied at boot, so a reload is never a free heal. Add any new persistent field to `S`, give it a default, and validate it in `migrate()`.
 - **Lifecycle:** use `GGLife.onVisibility(f)` and `GGLife.onResize(f)`. Don't add new raw `resize` or `visibilitychange` listeners.
 
 ## Code style
@@ -80,6 +80,8 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
 - **Don't create elements and listeners on every draw:** build once, then update properties (see the `drawHud` skill bar and its `hudH()` helper). Remove listeners or observers you attach to persistent elements.
 - **No layout reads** (`getBoundingClientRect`, `offsetWidth`, `getComputedStyle`) inside `draw()`, `syncBoard()` or the cascade loop.
 - **Guard `localStorage`:** wrap every read and write in `try{}catch(e){}`.
+- **Save import:** `migrate()` is the single place that validates loaded or imported values (levels ≤ 9999, forge 0–`FMAX`, potions 0–9999, counts ≥ 0). New persistent numeric fields must be clamped there.
+- **Secrets:** never store tokens in the save or in the settings object. The debug GitHub token is session-only unless the tester ticks "Remember token on this device".
 - **Persistent loops:** no `requestAnimationFrame` loop may run forever. Stop it when its view is hidden, and use a timer for low-frequency checks.
 
 ## Game rules that must hold
@@ -103,17 +105,19 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
   | `r` (rewards) | 0.75 | 0.9 | 1 | 1.25 | 1.6 |
 
   Grindmaster's `sk:2` doubles skulls **both ways**.
-- NG+ tier `t` multiplies enemy HP and attack by `1+t` (`t ≤ 10`). Infinite Vault multiplies both by `1.15^(wave−1)`.
+- NG+ tier `t` multiplies enemy HP and attack by `1+t` (`t ≤ 10`). Infinite Vault multiplies both, and its rewards, by `VMUL(wave) = 1.15^(wave−1)` (capped at 1e12 only to stay finite).
 - Each difficulty keeps its own campaign progress (`S.dp`); hero, gold and gear are shared.
 
 **Combat invariants:**
 - **Cascade loop:** at most 80 steps (`guard<80`). Never recurse.
 - **Combo:** `cm = 1 + (combo−1)·(Chain ? 1.5 : 1)` for the player and `1 + (combo−1)·0.5` for the enemy. A Catalyst+Catalyst wipe is a flat ×5 for the player and ×3 for the enemy (same halved slope, audit W4). Each multiplier is applied once per hit.
 - **Caps:** next-skill `P.cc ≤ 5`, enemy block `≤ 0.9`, dodge `≤ 0.35`, cooldown reduction `≤ 0.3`, Cursed Rocks `≤ 12`.
+- **Random gems:** every random gem that appears mid-fight (cascade refill, Thawing Rune) must come from `refillGem()`; rules shape it there (Barren Emeralds overrides it). Never rewrite `B` inside `syncBoard()` or any other render function.
+- **Move search:** `tryMoves()` only offers swaps that form a line through one of the two swapped cells, unless the board already has a match. Callbacks must not depend on seeing non-matching swaps.
 - **Board recovery:** `ensure()` runs after every move and tactic. It tries up to 200 shuffles, then regenerates the board, so there is never a no-move state.
-- **Boss enrage:** after player turn `15 + LV('pvt')` (skulls ×2, permanent burn). Tactics fire on enemy turns where `E.tc % 3 == 0`.
+- **Boss enrage:** after player turn `15 + LV('pvt')` (skulls ×2, permanent burn). Tactics fire on enemy turns where `E.tc % 3 == 0`; Stun and Freeze both skip the `E.tc++`, so they pause that clock.
 - **4+ match:** gives the player an extra turn (unless the Chain keystone is active). The enemy gets at most 3 chained turns.
 - **Fight transitions:** a combat chain belongs to one enemy. `resolve()` and `swap()` pin it as `E0` and stop as soon as `E !== E0` (a victory screen's Continue can replace `E` mid-cascade; `settle()` then deals the new board). Keep those checks after every `await` in the cascade loop (audit W1).
 - **No free heals:** UI actions (class switch, menus) must never raise the hero's HP fraction. A class switch keeps the HP fraction, and during a live fight also armor, ailments and the Phoenix flag (audit C1).
 
-**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Fixed: C1, W1, W3, W4. Still open: W2 (the harness exists; the curve and targets are a design decision) and L1–L8.
+**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Fixed: C1, W1, W3, W4 and L1–L8. Still open: W2 (the harness exists; the curve and targets are a design decision).
