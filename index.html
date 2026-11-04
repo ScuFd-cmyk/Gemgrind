@@ -3277,8 +3277,21 @@ body #pcard #potb{justify-self:stretch;min-height:clamp(36px,5.5vh,48px)}
 /* short landscape screens (phones on their side) */
 @media (min-aspect-ratio:6/5) and (max-height:520px){
 #ecard .eside .erow{display:none}#ecard #ef{width:clamp(44px,15vh,80px);height:clamp(44px,15vh,80px)}
-body #pcard .pinfo .pman{display:none}body #pcard{gap:5px!important}
+body #pcard{gap:5px!important}
+/* v6.0.6 · the mana chips + XP line stay visible on phones held sideways (they used to be hidden here to make room).
+   Room comes from single-line skill names / hero line, a one-line speed button and a shorter potion button. */
+body #pcard .pinfo .pman{display:flex!important;align-items:center;justify-content:space-between;gap:6px;min-height:0;line-height:1;margin-top:1px}
+body #pcard .pinfo .pman #mana{display:flex;gap:2px;flex:0 1 auto;min-width:0;overflow:hidden}
+body #pcard .pinfo .pman #mana .mc{min-width:0;padding:0 3px;margin:0;font-size:9.5px;line-height:13px}
+body #pcard .pinfo .pman #cx{font-size:9.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body #pcard #spdb{min-height:24px!important;padding-top:2px!important;padding-bottom:2px!important}body #pcard #spdb br{display:none}
+body #pcard #potb{min-height:28px!important}
+body #pcard .sk2 b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}body #pcard .sk2 b br,body #pcard .sk2>br{display:none}
+body #pcard #cn b,body #pcard #cn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}body #pcard #cn small br{display:none}
+body #pcard .pinfo .row.sp{white-space:nowrap}
 }
+/* v6.0.6 · very narrow side panel (small phones sideways): keep all six mana chips, drop the XP text */
+@media (min-aspect-ratio:6/5) and (max-height:520px) and (max-width:700px){body #pcard .pinfo .pman #cx{display:none}}
 
 /* ---------- 3. portrait: ultra-slender banner ribbons ---------- */
 @media (max-aspect-ratio:6/5){
