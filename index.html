@@ -1028,6 +1028,8 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
+/* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
+const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
 /* ===== core data ===== */
 const $=i=>document.getElementById(i);
 const G=['🔥','⚡','🌿','💧','🔮','🪨','💀','✖'],GN=['Ruby','Topaz','Emerald','Sapphire','Amethyst','Amber','Skull','Cursed Rock'],N=7,CAP_I=40;let CAP=20;
@@ -1222,7 +1224,8 @@ let tsk=null,tsv=null;
 function tstat(){const c=C(),key=S.cls+':'+c.n.join();if(key===tsk)return tsv;const t={dodge:0,score:0,cdr:0,hp:0,mana:0,sh:0,all:0,wh:0,cd:[0,0,0,0,0,0],ks:{},quad:0,dur:0,gm:[0,0,0,0,0,0],crit:0,lsx:0,skd:0,pen:0,pot:0};
 for(const i of c.n){const o=WEB.n[i];if(!o)continue;if(o.t=='hy'){for(const q in o.s.fx)t[q]=(t[q]||0)+o.s.fx[q]}else if(o.t=='su'){const s=o.s;if(s.k=='gm')t.gm[s.c]+=s.v;else if(s.k=='all')t.all+=s.v/100;else t[s.k]+=s.v}else if(o.t=='mx')t.ks[o.m[0]]=1;else if(o.t=='mi')t[o.s[0]]+=o.s[1];else if(o.t=='ks')t.ks[o.k[0]]=1;else if(o.all)t.all+=o.all/100;else if(o.c!=null){t.cd[o.c]+=o.v/100;t.wh++}}tsk=key;return tsv=t}
 /* active skill power: levels 1-10 hit at 60% (-40%), the cut fades 4%/level to 0 at level 20; then +2%/level, +2.5%/wheel node, +4%/weapon forge level */
-function stat(){const s=stat0(),t=tstat(),c=S.cls;const my=c=='Mythos';/* v6.0: Mythos carries every class passive at once */s.dodge=Math.min(.35,t.dodge+(c=='Ranger'||my?.08:0));s.score=t.score;s.cdr=Math.min(.3,t.cdr);s.heal=c=='Cleric'||my?1.2:1;
+function stat(){const s=statBase();for(const h of STAT_HOOKS)h(s);return s}
+function statBase(){const s=stat0(),t=tstat(),c=S.cls;const my=c=='Mythos';/* v6.0: Mythos carries every class passive at once */s.dodge=Math.min(.35,t.dodge+(c=='Ranger'||my?.08:0));s.score=t.score;s.cdr=Math.min(.3,t.cdr);s.heal=c=='Cleric'||my?1.2:1;
 if(c=='Warrior'||my){s.arm*=1.15;s.skd*=1.1}if(c=='Paladin'||my){s.arm*=1.12;s.cap*=1.12}if(c=='Rogue'||my)s.crit+=.1;return s}
 function skillPow(l,wh,fw){const early=l<=10?.6:Math.min(1,.6+.04*(l-10));return early*(1+.02*(l-1)+.025*wh+.04*fw)}
 function stat0(){const c=C(),b=CL[S.cls],t=tstat(),ks=t.ks,g=gear(),sk=S.sk,f=S.fg,hp=(50+8*c.l+b.h*c.l/2+3*sk[4]+g.hp+pv('accessory')+t.hp)*(ks.glass?.6:1)*(1+.05*S.lab.med)*BAL.pst;
@@ -1325,7 +1328,8 @@ const gact=()=>{const w=cur();return w?w.a:Math.floor((S.stage-1)/10)%5};
 const ehp=(s,boss,di)=>Math.floor((30+s*s*1.1+s*28)*(boss?1.8:1)*DIFF[di].eh*(stat().ks.avarice?1.4:1)*BAL.eh),eat=(s,boss)=>(5+s*1.5)*(boss?1.25:1)*BAL.ed;
 function foeOf(w,here){let s,boss,nm,hue;if(w){boss=here&&S.k>=w.g;s=w.s+(boss?2:0);nm=boss?w.b:w.m[Math.floor(Math.random()*w.m.length)];hue=w.h}else{s=S.stage;boss=s%10==0;nm=(boss?'Boss ':'')+ENM[s%5];hue=(s*47)%360}return{s,boss,nm,hue}}
 /* every new battle: fresh enemy, empty mana pools, no skill-combo carryover, fresh board */
-function newEnemy(){if(PAUSED)abortCombat();const w=cur(),f=foeOf(w,S.at==S.loc&&!S.done),tac=f.boss&&(w?w.B:true),elite=f.boss||Math.random()<.22,nm=(!f.boss&&elite?'Elite ':'')+f.nm;
+function newEnemy(){enemyBase();for(const h of ENEMY_HOOKS)h()}
+function enemyBase(){if(PAUSED)abortCombat();const w=cur(),f=foeOf(w,S.at==S.loc&&!S.done),tac=f.boss&&(w?w.B:true),elite=f.boss||Math.random()<.22,nm=(!f.boss&&elite?'Elite ':'')+f.nm;
 E={n:nm,f:monster(f.nm,f.hue,f.boss,gact()),sig:nm+f.hue+f.boss,hue:f.hue,s:f.s,boss:f.boss,elite,tac,act:gact(),mx:Math.floor(ehp(f.s,f.boss,S.diff)*(elite&&!f.boss?1.3:1)),hp:0,at:eat(f.s,f.boss)*(elite&&!f.boss?1.15:1),arm:0,m:[0,0,0,0,0,0],sk:ES,st:{burn:0,poison:0,frz:0,fi:0,stun:0,curse:0,sund:0},tc:0,pt:0,enr:0,dead:false,bl:D().bl*(f.boss?1.25:elite?1.1:1)*(.85+Math.random()*.3)};E.hp=E.mx;
 P.m=[0,0,0,0,0,0];P.cc=1;P.thorn=0;P.rez=0;newBoard()}
 const penBl=()=>.04*S.fg.pen+stat().pen,eBlock=()=>E?Math.max(0,Math.min(.9,(E.bl||0)-penBl())):0;
@@ -1730,7 +1734,8 @@ else if(f.s==2){e.className='fxl laser v'+(f.w?' w3':'');e.style.left=cx+'%';e.s
 else{e.className='fxl blast'+(f.s==5?' b2':'')+(f.r==2?' b5':'')+(f.s==7?' b7':'');e.style.left=cx+'%';e.style.top=cy+'%'}bd.append(e)}
 setTimeout(()=>e.remove(),f.s==7?960:760)}}
 function shake(h){sfx('impact',h);if(RM())return;const w=$('bw');w.classList.remove('screen-shake','hv');void w.offsetWidth;w.classList.add('screen-shake');if(h)w.classList.add('hv');clearTimeout(w._st);w._st=setTimeout(()=>w.classList.remove('screen-shake','hv'),620)}
-function syncBoard(){const bc=(GT?'gath ga'+GT.a:'b'+(E?E.act:0))+(shufOn?' shuf':'')+(!GT&&E&&E.enr?' enr':''),bd=$('board');if(bd.className!=bc)bd.className=bc;
+function syncBoard(){syncBase();for(const h of SYNC_HOOKS)h()}
+function syncBase(){const bc=(GT?'gath ga'+GT.a:'b'+(E?E.act:0))+(shufOn?' shuf':'')+(!GT&&E&&E.enr?' enr':''),bd=$('board');if(bd.className!=bc)bd.className=bc;
 const selected=new Set(hl);if(sel!=null)selected.add(sel);const hinted=new Set(hint);
 for(let i=0,n=B.length;i<n;i++){const v=B[i];if(v<0)continue;let t=tiles[i];if(t&&(t._v!=v||t._g!=!!GT||t._sp!=(SP[i]||0))){t.classList.remove('t'+t._v);t.classList.add('t'+v);t.firstChild.innerHTML=ic(v,i);t._v=v;t._sp=SP[i]||0;t._g=!!GT}if(!t)t=tiles[i]=mkTile(v,i);t._i=i;setPos(t,i);t.classList.toggle('s',selected.has(i));t.classList.toggle('hint',hinted.has(i));t.classList.toggle('fz',FZ[i]>0);t.classList.toggle('trp',TR[i]>0);for(let k=1;k<6;k++)t.classList.toggle('sp'+k,SP[i]==k)}}
 function swapTiles(a,b){for(const A of[B,tiles,FZ,SP,TR])[A[a],A[b]]=[A[b],A[a]];syncBoard()}
@@ -1939,7 +1944,8 @@ $('eh').style.width=100*Math.max(0,E.hp)/E.mx+'%';$('et').textContent=Math.max(0
  if(sk._bar!==sig||sk.children.length<it.length){sk._bar=sig;sk._h=null;sk.innerHTML='';it.forEach((x,i)=>{const e=document.createElement('button');e.className='sk2';e.innerHTML=x.h;e.dataset.skillType=x.m.type;e.dataset.element=x.m.el;e.dataset.tags=x.m.type+' '+x.m.el+' '+x.k[2];e.title=x.k[0]+' · '+x.m.type+' · '+x.m.el;e.onclick=()=>castP(i);sk.append(e)})}
  it.forEach((x,i)=>{const e=sk.children[i];if(e.classList.contains('gate-locked')){if(x.dis)e.dataset.gwd='1';else delete e.dataset.gwd;e.disabled=false}else e.disabled=x.dis})}}
 {const h='⏩<br>×'+SPD();if(spdB._h!==h){spdB._h=h;spdB.innerHTML=h}}if(sk.lastChild!==spdB)sk.append(spdB);syncBoard()}
-function renderCls(){const el=$('cls');el.innerHTML='';for(const k in CL){const e=document.createElement('button');e.innerHTML=CL[k].i+' <b>'+k+'</b> Lv '+S.c[k].l+'<br><span class="m">'+CL[k].d+'</span><br><span class="m" style="color:#e9c88c">'+CLP[k].split(' · ')[0]+'</span>';e.className=k==S.cls?'on':'';e.onclick=()=>{if(busy)return;/* v6.0.5 · audit C1: a class switch is never a free heal. The HP fraction always carries over (HP also carries between fights); during a live fight armor, ailments and the Phoenix flag do too. Mana and combo still reset. */const live=!GT&&!!E&&!E.dead&&!dead&&(E.pt>0||E.hp<E.mx),f=dead||!(P.hp>0)?1:Math.min(1,P.hp/Math.max(1,stat().hp)),ka={arm:P.arm,st:Object.assign({},P.st),rez:P.rez};S.cls=k;wsel=-1;wcen=0;heal();{const s=stat();P.hp=Math.max(1,s.hp*f);if(live){P.arm=Math.min(ka.arm,s.cap);P.st=ka.st;P.rez=ka.rez}}$('clsm').hidden=true;upd()};el.append(e)}}
+function renderCls(){clsBase();for(const h of CLS_HOOKS)h()}
+function clsBase(){const el=$('cls');el.innerHTML='';for(const k in CL){const e=document.createElement('button');e.innerHTML=CL[k].i+' <b>'+k+'</b> Lv '+S.c[k].l+'<br><span class="m">'+CL[k].d+'</span><br><span class="m" style="color:#e9c88c">'+CLP[k].split(' · ')[0]+'</span>';e.className=k==S.cls?'on':'';e.onclick=()=>{if(busy)return;/* v6.0.5 · audit C1: a class switch is never a free heal. The HP fraction always carries over (HP also carries between fights); during a live fight armor, ailments and the Phoenix flag do too. Mana and combo still reset. */const live=!GT&&!!E&&!E.dead&&!dead&&(E.pt>0||E.hp<E.mx),f=dead||!(P.hp>0)?1:Math.min(1,P.hp/Math.max(1,stat().hp)),ka={arm:P.arm,st:Object.assign({},P.st),rez:P.rez};S.cls=k;wsel=-1;wcen=0;heal();{const s=stat();P.hp=Math.max(1,s.hp*f);if(live){P.arm=Math.min(ka.arm,s.cap);P.st=ka.st;P.rez=ka.rez}}$('clsm').hidden=true;upd()};el.append(e)}}
 function renderLevels(){$('skl').innerHTML=[['⚔️ Combat',[0,1,2,3,4]],['🌲 Gathering',[5,6,7,8]],['⚒️ Artisan',[9,10]]].map(([t,ix])=>'<h3 class="mt">'+t+'</h3>'+ix.map(i=>'<div class="row sp"><span>'+SK[i]+' <b>'+S.sk[i]+'</b></span><span class="m">'+SKD[i]+'</span></div><div class="bar"><i style="width:'+Math.min(100,100*(S.sx[i]||0)/sneed(S.sk[i]))+'%"></i></div>').join('<div style="height:5px"></div>')).join('')+'<div class="m mt">Gathering tiers (Bronze → Iron → Steel → Mithril → Rune) unlock at levels '+GLV.join(', ')+'. Foraging collects the reagent of the Act you gather in.</div>'}
 /* =====================================================================
    v3.4 HERO 2D — layered grim-dark paper doll (replaces the old 3D stage).
@@ -3564,9 +3570,9 @@ if(!v.sp||typeof v.sp!='object'||Array.isArray(v.sp))v.sp=spDef();const sp=v.sp,
 if(!HZ[v.haz])v.haz='';if(!S.route)S.route='home'}
 function petBonus(){const id=S.pets&&S.pets.eq,o=id&&S.pets.own[id];if(!o)return null;const p=PET[id];return{p,o,x:pPow(p,o.l)}}
 /* stat coefficient injection: every HUD bar, hit, heal and shield reads stat(), so the companion reaches combat through here only */
-const _stat=stat;stat=function(){const s=_stat(),q=petBonus();if(!q)return s;const X=q.x/100;
+onStat(s=>{const q=petBonus();if(!q)return;const X=q.x/100;
 switch(q.p.k){case'agi':s.dodge=Math.min(.35,s.dodge+X*.25);break;case'def':s.arm*=1+X;break;case'vit':s.hp*=1+X;break;case'int':s.skp*=1+X;break;case'str':s.atk*=1+X;break;
-case'crit':s.crit+=X*.25;break;case'mana':s.gm=s.gm.map(v=>v+X);break;case'elem':s.cd=s.cd.map(v=>v+X);break;case'shield':s.cap*=1+X;s.sh+=s.hp*X*.25;break;case'vamp':s.lsx+=X*40;break}return s};
+case'crit':s.crit+=X*.25;break;case'mana':s.gm=s.gm.map(v=>v+X);break;case'elem':s.cd=s.cd.map(v=>v+X);break;case'shield':s.cap*=1+X;s.sh+=s.hp*X*.25;break;case'vamp':s.lsx+=X*40;break}});
 function rollPet(depth){depth=Math.max(0,Math.min(1,depth||0));const w=[64-22*depth,26+6*depth,9+12*depth,.8+2.4*depth];let x=R()*w.reduce((a,b)=>a+b),t=0;while(t<3&&x>w[t]){x-=w[t];t++}const L=PETS.filter(p=>p.t==t&&(p.a|0)<=petAct());return L[(R()*L.length)|0].id}
 /* v6.0: a new Act's companions join the egg pool once you reach that Act on any difficulty */
 function petAct(){try{if(window.GG60&&GG60.anyDone())return 4;return Math.max(0,Math.min(4,Math.floor((window.GG60?GG60.bestLoc():S.loc)/210)))}catch(e){return 0}}
@@ -3734,9 +3740,9 @@ function hazApply(){const bw=$('bw');if(!bw)return;let h=$('hazfx');if(!h){h=doc
 function rollHaz(){const ks=Object.keys(HZ).filter(k=>k!=V().haz);V().haz=ks[(R()*ks.length)|0];const z=HZ[V().haz];hazApply();fl(z.i+' '+z.n+'!','#f5cb52','bw',1);msg('Treasury hazard: '+z.n+'. '+z.d)}
 /* wave enemies: base tier fixed at run start, then +15% HP and damage per wave, compounding, with no ceiling */
 /* v6.0.6 · audit L2: enemy stats and vault rewards share one curve; the cap only keeps numbers finite (reached near wave 200, far past any real run) */const VMUL=w=>Math.min(1e12,Math.pow(1.15,Math.max(0,(w|0)-1)));
-const _ne=newEnemy;newEnemy=function(){_ne();if(!vOn()||GT||!E)return;const v=V(),boss=v.wave%5==0,m=VMUL(v.wave),z=HZ[v.haz]||HZ.lava,tier=v.tier,elite=boss||R()<.25,
+onEnemy(()=>{if(!vOn()||GT||!E)return;const v=V(),boss=v.wave%5==0,m=VMUL(v.wave),z=HZ[v.haz]||HZ.lava,tier=v.tier,elite=boss||R()<.25,
  base=boss?VBN[((v.wave/5|0)-1)%VBN.length]:VEN[(R()*VEN.length)|0],nm=(!boss&&elite?'Elite ':'')+base,hue=44;
- Object.assign(E,{n:nm,f:monster(base,hue,boss,z.a),sig:nm+hue+boss+v.wave,hue,s:tier,boss,elite,tac:boss,act:z.a,mx:Math.floor(ehp(tier,boss,S.diff)*m*(elite&&!boss?1.3:1)),at:eat(tier,boss)*m*(elite&&!boss?1.15:1)});E.hp=E.mx;syncBoard()};
+ Object.assign(E,{n:nm,f:monster(base,hue,boss,z.a),sig:nm+hue+boss+v.wave,hue,s:tier,boss,elite,tac:boss,act:z.a,mx:Math.floor(ehp(tier,boss,S.diff)*m*(elite&&!boss?1.3:1)),at:eat(tier,boss)*m*(elite&&!boss?1.15:1)});E.hp=E.mx;syncBoard()});
 function vaultStart(){const v=V();if(GT)stopGather();homeHide();S.cm=0;S.route='vault';
  if(v.on){newEnemy();heal();hazApply();showTab('battle');save();draw();msg('You descend back into the vault at wave '+v.wave+'.');return}
  Object.assign(v,{on:1,wave:1,mult:1,tier:Math.max(1,Math.floor(C().l/1.1)),haz:'',sp:spDef()});rollHaz();newEnemy();heal();save();showTab('battle');draw();
@@ -3971,9 +3977,8 @@ NODES.length=0;
 /* ---------- combat hook: scale campaign enemies only ---------- */
 const inVault=()=>!!(window.GG40&&GG40.vOn&&GG40.vOn());
 const campaignActive=()=>!GT&&!!S.cm&&!inVault()&&!!E&&!!cur();
-const _ne=newEnemy;
-newEnemy=function(){_ne();if(!campaignActive())return;const w=cur(),m=campaignStatModifier(w.ci,w.j);
- E.cmod=m;E.mx=Math.max(1,Math.floor(E.mx*m));E.hp=E.mx;E.at*=m;E.sh0=Math.floor(E.mx*shieldFrac(m));E.arm=E.sh0;E.sig+='|x'+m.toFixed(3)};
+onEnemy(()=>{if(!campaignActive())return;const w=cur(),m=campaignStatModifier(w.ci,w.j);
+ E.cmod=m;E.mx=Math.max(1,Math.floor(E.mx*m));E.hp=E.mx;E.at*=m;E.sh0=Math.floor(E.mx*shieldFrac(m));E.arm=E.sh0;E.sig+='|x'+m.toFixed(3)});
 const _rb=restartBattle;
 restartBattle=function(){_rb();if(E&&E.sh0&&campaignActive()){E.arm=E.sh0;draw()}};
 
@@ -4442,9 +4447,9 @@ window.campaignEnemyLevel=campaignEnemyLevel;window.levelTier=levelTier;/* v6.0.
 const vaultOn=()=>!!(window.GG40&&GG40.vOn&&GG40.vOn());
 const campaignActive=()=>!GT&&!!S.cm&&!vaultOn()&&!!E&&!!cur();
 /* rebinds the current campaign foe to its level: HP, shield and attack are rescaled by the exact ratio of the base curves */
-const _ne=newEnemy;newEnemy=function(){_ne.apply(this,arguments);if(!campaignActive())return;const w=cur(),L=campaignEnemyLevel(w.ci,w.j),s0=E.s,s1=levelTier(L)+(E.boss?2:0);
+onEnemy(()=>{if(!campaignActive())return;const w=cur(),L=campaignEnemyLevel(w.ci,w.j),s0=E.s,s1=levelTier(L)+(E.boss?2:0);
  E.lvl=L;if(Math.abs(s1-s0)<1e-9)return;const rh=ehp(s1,E.boss,S.diff)/Math.max(1,ehp(s0,E.boss,S.diff)),ra=eat(s1,E.boss)/eat(s0,E.boss);
- E.s=s1;E.mx=Math.max(1,Math.floor(E.mx*rh));E.hp=E.mx;E.at*=ra;if(E.sh0){E.sh0=Math.floor(E.sh0*rh);E.arm=E.sh0}E.sig+='|L'+L};
+ E.s=s1;E.mx=Math.max(1,Math.floor(E.mx*rh));E.hp=E.mx;E.at*=ra;if(E.sh0){E.sh0=Math.floor(E.sh0*rh);E.arm=E.sh0}E.sig+='|L'+L});
 onHud(()=>{if(campaignActive()&&E.lvl){const st=$('st');if(st)st.textContent='Lv '+E.lvl+' · '+D().ic+(E.cmod?' · ×'+E.cmod.toFixed(2):'')}validateProgressionLocks()});
 const _pd=pvDraw;pvDraw=function(){_pd.apply(this,arguments);const p=PV,glc=$('glc');if(!p||!glc)return;
  if(p.cm&&p.act!='gather'){const w=node(p.i),here=p.i==S.loc&&!S.done,boss=here&&S.k>=w.g,L=campaignEnemyLevel(w.ci,w.j),s=levelTier(L)+(boss?2:0),m=window.GG41?GG41.campaignStatModifier(w.ci,w.j):1,[lo,hi]=levelBracket(w.ci);
@@ -4879,7 +4884,7 @@ const _gi=genItem;genItem=function(){const it=_gi.apply(this,arguments);it.so=ro
 const _gear=gear;gear=function(){const g=_gear.apply(this,arguments);
  for(const s in S.eq){const it=S.eq[s];if(it&&it.so)for(const r of it.so)if(r&&RK[r.k]){const[k,v]=runeStat(r);g[k]=(g[k]||0)+v}}
  const sb=setBonusStats();for(const k in sb)g[k]=(g[k]||0)+sb[k];return g};
-const _stat=stat;stat=function(){const s=_stat.apply(this,arguments);for(const y of synList())try{SYN[y.c][y.i][2](s)}catch(e){}return s};
+onStat(s=>{for(const y of synList())try{SYN[y.c][y.i][2](s)}catch(e){}});
 
 /* =====================================================================
    7. BATTLE + GATHERING DROPS, BESTIARY KILL LEDGER
@@ -4991,9 +4996,9 @@ function synHtml(){const L=synList(),M=BASE.filter(mastered),U=BASE.filter(k=>!m
  for(const k of M)h+='<div class="row">'+SYN[k].map((p,i)=>bt('v51:syn:'+k+':'+i,CL[k].i+' '+esc(p[0])+'<small>'+esc(p[1])+'</small>','syb'+(L.some(y=>y.c==k&&y.i==i)?' on':''))).join('')+'</div>';
  if(U.length)h+='<div class="m">🔒 Not yet mastered: '+U.map(k=>CL[k].i+' '+k+' '+S.c[k].l+'/'+MLV).join(' · ')+'</div>';
  return h}
-const _rc=renderCls;renderCls=function(){_rc.apply(this,arguments);try{const ks=Object.keys(CL),bs=$('cls').children;
+onCls(()=>{try{const ks=Object.keys(CL),bs=$('cls').children;
  for(let i=0;i<bs.length;i++){const k=ks[i];if(!k)continue;const m=mastered(k);bs[i].querySelector('b').insertAdjacentHTML('afterend','<span class="v51ms'+(m?'':' lk')+'">'+(m?'★ Mastered':'Mastery Lv '+mlv(k))+'</span>')}
- $('synw').innerHTML=synHtml();if(typeof PG=='object')PG.sched()}catch(e){console.error(e)}};
+ $('synw').innerHTML=synHtml();if(typeof PG=='object')PG.sched()}catch(e){console.error(e)}});
 
 /* =====================================================================
    10. BESTIARY POPUP
@@ -5286,10 +5291,10 @@ function chFoe(){const sp=CH.sp,f=sp.f[CH.f],ci=f.ci,j=f.j,a=actOf(ci),boss=!!f.
  Object.assign(E,{n:(boss?'':'Elite ')+f.nm,f:monster(f.nm,w.h,boss,a),sig:'ch'+sp.kind+sp.k+'|'+CH.f+'|'+f.nm,hue:w.h,s,boss,elite:true,tac:boss,act:a,mx,hp:mx,at:eat(s,boss)*m*(boss?1:1.15),
   lvl:L,cmod:m,sh0:sh,arm:sh,ng:t,bl:D().bl*(boss?1.25:1.1)*(.85+R()*.3)});
  syncBoard()}
-const _ne=newEnemy;newEnemy=function(){const r=_ne.apply(this,arguments);try{if(GT||!E)return r;E.afx=[];
+onEnemy(()=>{try{if(GT||!E)return;E.afx=[];
  if(CH){chFoe();applyAfx(ruleAfx(CH.rs))}
  else if(vaultOn()){const rs0=rset();if(rs0.has('elites')&&!E.elite){E.elite=true;E.n='Elite '+E.n;E.mx=Math.floor(E.mx*1.3);E.hp=E.mx;E.at*=1.15;E.sig+='|E'}applyAfx(ruleAfx(rs0))}
- else if(campaignActive()&&ngT()>0){ngScale();if(E.elite)applyAfx(rollAfx(ngAfxN(ngT())))}}catch(e){console.error('[Gemgrind v5.1] foe hook',e)}return r};
+ else if(campaignActive()&&ngT()>0){ngScale();if(E.elite)applyAfx(rollAfx(ngAfxN(ngT())))}}catch(e){console.error('[Gemgrind v5.1] foe hook',e)}});
 /* --- fixed board seed + Barren Emeralds --- */
 const NOEM=[0,1,3,4,5,6],nonEm=()=>NOEM[Math.floor(Math.random()*NOEM.length)];
 function barren(){let n=0;do{for(let i=0;i<B.length;i++)if(B[i]==2)B[i]=nonEm();for(let g=0,m=find();m.size&&g<60;g++,m=find())m.forEach(i=>{B[i]=nonEm()})}while((has3()||!hasMove())&&++n<60)}
@@ -5297,7 +5302,7 @@ const _fr=fresh;fresh=function(){const sd=CH&&CH.seedNext,MR=Math.random;if(sd){
  try{const r=_fr.apply(this,arguments);if(!GT&&on('noheal'))barren();return r}finally{Math.random=MR}};
 /* v6.0.6 · audit L4: Barren Emeralds shapes new gems at the source; syncBoard() no longer rewrites the board */const _rg=refillGem;refillGem=function(){return!GT&&on('noheal')?nonEm():_rg.apply(this,arguments)};
 /* --- rules that touch the player --- */
-const _st=stat;stat=function(){const s=_st.apply(this,arguments);if(!GT&&on('glass'))s.hp*=.7;return s};
+onStat(s=>{if(!GT&&on('glass'))s.hp*=.7});
 const _up=usePot;usePot=function(k){if(!GT&&on('nopot')){$('potm').hidden=true;msg('🚫 No Potions: this trial forbids drinking potions.');fl('🚫 NO POTIONS','#f87171','pcard');return}return _up.apply(this,arguments)};
 const _cp=castP;castP=function(i){if(!GT&&on('skulls')){msg('💀 Skulls Only: your skills are sealed. Match skulls to strike.');fl('💀 SKILLS SEALED','#f87171','pcard');return}return _cp.apply(this,arguments)};
 /* --- affix behaviour --- */
@@ -5887,9 +5892,9 @@ const SNM=['Cleared','Deathless','Swift'];
    3. HOOKS · damage + gold vs families, defeat resets the deathless run
    ===================================================================== */
 let GB=0,inWin=0,DR=[];
-const _ne=newEnemy;newEnemy=function(){const r=_ne.apply(this,arguments);try{if(E)E._fam=famOf(E.n)}catch(e){}return r};
+onEnemy(()=>{try{if(E)E._fam=famOf(E.n)}catch(e){}});
 const _hit=hit;hit=function(d){try{if(E&&!E.dead&&!GT&&isFinite(d)&&d>0){if(E._fam===undefined)E._fam=famOf(E.n);const t=E._fam?famTier(E._fam):0;if(t)arguments[0]=d*(1+.01*t)}}catch(e){}return _hit.apply(this,arguments)};
-const _stat=stat;stat=function(){const s=_stat.apply(this,arguments);if(GB&&s&&isFinite(s.gold))s.gold*=1+.02*GB;return s};
+onStat(s=>{if(GB&&s&&isFinite(s.gold))s.gold*=1+.02*GB});
 const _die=die;die=function(){const was=dead,r=_die.apply(this,arguments);try{if(!was&&dead&&S.cm&&!vaultOn()&&!chOn())ms().rn[Math.min(S.at,TOTAL-1)]=0}catch(e){}return r};
 
 /* hidden bad-luck protection: every victory without a rare+ drop adds 2.5% (max 45%) to upgrade the next victory chest to Rare or better */
@@ -6285,8 +6290,8 @@ function rwActive(){const out=[];try{for(const sl in S.eq){const it=S.eq[sl],so=
  for(const w of RW)if(w[1][0]==so[0].k&&w[1][1]==so[1].k&&!out.includes(w))out.push(w)}}catch(e){}return out}
 function syAll(){try{if(!window.GG51)return[];const L=GG51.synList();return SY.filter(q=>q[1]==S.cls&&L.some(y=>y.c==q[2]&&y.i==q[3]))}catch(e){return[]}}
 function syActive(){return syAll()[0]||null}
-const _st=stat;stat=function(){const s=_st.apply(this,arguments);
- try{const L=rwActive(),y=syActive(),mx=S.dx&&S.dx.rw&&S.dx.rw[3];if(L.length||y||mx){s.ks=Object.assign({},s.ks);for(const w of L)w[5](s);for(const q of syAll())q[6](s);if(mx)s.dmg*=1.05}}catch(e){}return s};
+onStat(s=>{
+ try{const L=rwActive(),y=syActive(),mx=S.dx&&S.dx.rw&&S.dx.rw[3];if(L.length||y||mx){s.ks=Object.assign({},s.ks);for(const w of L)w[5](s);for(const q of syAll())q[6](s);if(mx)s.dmg*=1.05}}catch(e){}});
 let wsig='';setInterval(()=>{try{if(!S.hero||!S.dx)return;const L=rwActive(),Y=syAll(),k=L.map(w=>w[0]).join()+'|'+Y.map(q=>q[0]).join();if(k===wsig)return;wsig=k;
  for(const w of L)if(!found('r:'+w[0]))discover('r:'+w[0]);for(const y of Y)if(!found('y:'+y[0]))discover('y:'+y[0])}catch(e){}},700);
 
@@ -6554,7 +6559,7 @@ if(typeof bossTactic=='function'){const _bt=bossTactic;bossTactic=async function
  hook=()=>{if(!snap)return;const ch=[];for(let i=0;i<B.length;i++)if(B[i]!==snap[i])ch.push(i);if(!ch.length)return;hook=null;try{tag(ch,a)}catch(e){}};
  try{return await _bt.apply(this,arguments)}finally{hook=null}}}
 
-if(typeof syncBoard=='function'){const _sb=syncBoard;syncBoard=function(){const r=_sb.apply(this,arguments);try{body();if(hook)hook();sync()}catch(e){}return r}}
+onSync(()=>{try{body();if(hook)hook();sync()}catch(e){}});
 onDraw(()=>{try{body();sync()}catch(e){}});
 
 /* ---------- settings: Shapes only ---------- */
@@ -7001,8 +7006,8 @@ function unlockCheck(){if(!S.hero||S.mythU||!unlocked())return;const th=$('story
  fl('🌌 MYTHOS AWAKENS','#ff9ff0','bw',1);
  try{theater('The Mythos Awakens','The Chronicler · All seven disciplines mastered','Stay a while, and listen. Warrior, Mage, Rogue, Cleric, Paladin, Warlock, Ranger. You have walked every road a hero may walk, and walked each to its end.\n\nWhat stirs now is older than the classes themselves. The Mythos carries all seven gifts at once, and a ring of power beyond the masters of the web.\n\nOpen the class screen and take up the Mythos. Its true mastery waits at level two hundred and fifty.',()=>{})}catch(e){msg('🌌 The Mythos class is unlocked! Switch to it from the class screen.')}}
 /* class screen: Mythos sealed until unlocked */
-const _rc=renderCls;renderCls=function(){const r=_rc.apply(this,arguments);try{const ks=Object.keys(CL),bs=$('cls').children,i=ks.indexOf(MY),b=bs[i];if(b){const u=unlocked();b.classList.add(u?'g6my':'g6myl');if(!u){b.disabled=true;b.title='Master all seven classes (Lv '+MLV()+') to awaken the Mythos';
-  const n=BASE().filter(k=>S.c[k]&&S.c[k].l>=MLV()).length;b.insertAdjacentHTML('beforeend','<br><span class="m" style="color:#ff9ff0">🔒 Master all 7 classes · '+n+'/7</span>')}}}catch(e){console.error('[Gemgrind v6.0b] class screen',e)}return r};
+onCls(()=>{try{const ks=Object.keys(CL),bs=$('cls').children,i=ks.indexOf(MY),b=bs[i];if(b){const u=unlocked();b.classList.add(u?'g6my':'g6myl');if(!u){b.disabled=true;b.title='Master all seven classes (Lv '+MLV()+') to awaken the Mythos';
+  const n=BASE().filter(k=>S.c[k]&&S.c[k].l>=MLV()).length;b.insertAdjacentHTML('beforeend','<br><span class="m" style="color:#ff9ff0">🔒 Master all 7 classes · '+n+'/7</span>')}}}catch(e){console.error('[Gemgrind v6.0b] class screen',e)}});
 /* hero creation never offers Mythos */
 const _bc=buildCreate;buildCreate=function(){if(mk.cls==MY)mk.cls='Warrior';const r=_bc.apply(this,arguments);try{for(const b of $('ccls').querySelectorAll('button'))if(b.querySelector('b')&&b.querySelector('b').textContent==MY)b.remove()}catch(e){}return r};
 const _ng=newGame;newGame=function(){if(mk.cls==MY)mk.cls='Warrior';const r=_ng.apply(this,arguments);try{S.mythU=0;okCls()}catch(e){}return r};
