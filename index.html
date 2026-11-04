@@ -1212,7 +1212,7 @@ function achShow(){$('menu').hidden=true;const n=achPend(),b=[];if(n)b.push(['�
 const RMQ=matchMedia('(prefers-reduced-motion: reduce)'),RM=()=>!!(S.opt.rm||RMQ.matches),SPD=()=>S.opt.spd||1;
 /* combat clock: PAUSED holds every wait(); bumping BEP abandons any in-flight combat chain (restart / retreat) */
 let BEP=0,PAUSED=0,PQ=[];
-const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();try{localStorage.setItem('gg1',JSON.stringify(S))}catch(e){}if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)/(window.QAFF||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
+const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();ggLsSave();if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)/(window.QAFF||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
 let tsk=null,tsv=null;
 function tstat(){const c=C(),key=S.cls+':'+c.n.join();if(key===tsk)return tsv;const t={dodge:0,score:0,cdr:0,hp:0,mana:0,sh:0,all:0,wh:0,cd:[0,0,0,0,0,0],ks:{},quad:0,dur:0,gm:[0,0,0,0,0,0],crit:0,lsx:0,skd:0,pen:0,pot:0};
 for(const i of c.n){const o=WEB.n[i];if(!o)continue;if(o.t=='hy'){for(const q in o.s.fx)t[q]=(t[q]||0)+o.s.fx[q]}else if(o.t=='su'){const s=o.s;if(s.k=='gm')t.gm[s.c]+=s.v;else if(s.k=='all')t.all+=s.v/100;else t[s.k]+=s.v}else if(o.t=='mx')t.ks[o.m[0]]=1;else if(o.t=='mi')t[o.s[0]]+=o.s[1];else if(o.t=='ks')t.ks[o.k[0]]=1;else if(o.all)t.all+=o.all/100;else if(o.c!=null){t.cd[o.c]+=o.v/100;t.wh++}}tsk=key;return tsv=t}
@@ -1901,26 +1901,34 @@ function tap(i){if(sty||busy||PAUSED)return;poke();if(sel==null)sel=i;else{const
 const chips=m=>m.map((v,i)=>'<span class="mc t'+i+'">'+v+'</span>').join('');
 function stChips(o,pl){let s='';if(o.burn)s+='🔥'+o.burn+' ';if(o.poison)s+='☠️'+o.poison+' ';if(pl){if(P.thorn>0)s+='🌹'+Math.round(P.thorn)+' ';const f=FZ.filter(x=>x>0).length;if(f)s+='❄️'+f+' ';if(P.cc>1)s+='⚡×'+fmtM(P.cc)}else{if(o.frz)s+='❄️ ';if(o.stun)s+='💫 ';if(o.curse)s+='😈'+o.curse+' ';if(o.sund)s+='🪓'+o.sund+' '}return s.trim()}
 const spdB=document.createElement('button');spdB.id='spdb';spdB.className='sk2';spdB.title='Game speed';spdB.onclick=cycleSpd;
+/* v6.0.5 · hudH writes innerHTML only when the markup changed (skips re-parsing + relayout on every draw).
+   Every write to #cn / #mana / #eskl / #emana / #skills inside drawHud goes through it, so the cached copy never goes stale. */
+const hudH=(el,h)=>{if(el._h!==h){el._h=h;el.innerHTML=h}};
 function drawHud(){const c=C(),st=stat(),b=CL[S.cls],wl=cur(),hr=S.hero||{name:'Hero',av:'🧙',hue:30},ef=$('ef'),sk=$('skills');document.body.classList.toggle('rm',!!S.opt.rm);for(const q of[2,3])document.body.classList.toggle('sp'+q,SPD()==q);
-$('cn').innerHTML=heroPv(hr)+'<span style="line-height:1.15;text-align:left"><b>'+esc(hr.name)+'</b><br><small>'+b.i+' '+S.cls+' · Lv '+c.l+' ▾</small></span>';
+hudH($('cn'),heroPv(hr)+'<span style="line-height:1.15;text-align:left"><b>'+esc(hr.name)+'</b><br><small>'+b.i+' '+S.cls+' · Lv '+c.l+' ▾</small></span>');
 $('cx').textContent=Math.floor(c.x)+' / '+need(c.l)+' XP · 🪙 '+S.gold;$('xb').style.width=100*c.x/need(c.l)+'%';
-$('pt').textContent='HP '+Math.ceil(P.hp)+' / '+Math.ceil(st.hp);$('pst').textContent=stChips(P.st,1);$('ar').textContent='🛡️ '+Math.floor(P.arm)+' / '+Math.floor(st.cap);$('ph').style.width=100*Math.max(0,P.hp)/st.hp+'%';$('mana').innerHTML=chips(P.m);$('mpb').style.width=Math.min(100,100*P.m.reduce((x,y)=>x+y,0)/(6*CAP))+'%';
+$('pt').textContent='HP '+Math.ceil(P.hp)+' / '+Math.ceil(st.hp);$('pst').textContent=stChips(P.st,1);$('ar').textContent='🛡️ '+Math.floor(P.arm)+' / '+Math.floor(st.cap);$('ph').style.width=100*Math.max(0,P.hp)/st.hp+'%';hudH($('mana'),chips(P.m));$('mpb').style.width=Math.min(100,100*P.m.reduce((x,y)=>x+y,0)/(6*CAP))+'%';
 $('potb').textContent='🧪 '+potN();$('potb').disabled=!!GT;
 if(GT){const k='gath'+GT.a;if(ef.dataset.k!=k){ef.dataset.k=k;ef.className='';ef.innerHTML='<div class="gx">'+GSKIN[GT.a].i[0]+'</div>';document.body.style.background='radial-gradient(130% 55% at 50% 0,hsla('+ACTS[GT.a].h+',55%,38%,.4),transparent 70%),var(--bg)'}
-$('en').textContent='⛏️ '+ACTS[GT.a].t;$('est').textContent='';$('eskl').innerHTML='';$('epas').innerHTML='';$('esh').style.width='0';$('st').textContent=wl?'💎 '+shards()+'/50':'';$('eh').style.width=100*GT.mv/TRIP+'%';$('et').textContent='Moves '+GT.mv+' / '+TRIP;
+$('en').textContent='⛏️ '+ACTS[GT.a].t;$('est').textContent='';hudH($('eskl'),'');$('epas').innerHTML='';$('esh').style.width='0';$('st').textContent=wl?'💎 '+shards()+'/50':'';$('eh').style.width=100*GT.mv/TRIP+'%';$('et').textContent='Moves '+GT.mv+' / '+TRIP;
 $('loc').textContent=wl?wl.e+' '+wl.n:'♾️ The Wilds';$('lk').textContent='4+ match = free move';$('lp').style.width='0%';
-$('emana').textContent=GR.map(([,m])=>GSKIN[GT.a].i[GIX[m]]+GT.got[m].reduce((a,b)=>a+b,0)).join(' ');
-sk.innerHTML=GR.slice(0,3).map(([,m])=>{const s=GSK[m];return'<div class="sk2 gk"><b>'+GSKIN[GT.a].i[GIX[m]]+' '+SK[s]+' '+S.sk[s]+'</b><span class="m">'+MAT[m][gtier(m)]+'</span><div class="bar" style="height:3px;margin:2px 6px 0"><i style="width:'+Math.min(100,100*(S.sx[s]||0)/sneed(S.sk[s]))+'%"></i></div></div>'}).join('')+bt('gend','🏁<br>End trip','sk2')}
+$('emana')._h=null;$('emana').textContent=GR.map(([,m])=>GSKIN[GT.a].i[GIX[m]]+GT.got[m].reduce((a,b)=>a+b,0)).join(' ');
+sk._bar=null;hudH(sk,GR.slice(0,3).map(([,m])=>{const s=GSK[m];return'<div class="sk2 gk"><b>'+GSKIN[GT.a].i[GIX[m]]+' '+SK[s]+' '+S.sk[s]+'</b><span class="m">'+MAT[m][gtier(m)]+'</span><div class="bar" style="height:3px;margin:2px 6px 0"><i style="width:'+Math.min(100,100*(S.sx[s]||0)/sneed(S.sk[s]))+'%"></i></div></div>'}).join('')+bt('gend','🏁<br>End trip','sk2'))}
 else{if(ef.dataset.k!=E.sig){ef.dataset.k=E.sig;ef.innerHTML=E.f;document.body.style.background='radial-gradient(130% 55% at 50% 0,hsla('+E.hue+',55%,42%,.4),transparent 70%),var(--bg)'}ef.classList.toggle('elite',!!E.elite);ef.classList.toggle('sr-poi',E.st.poison>0);ef.classList.toggle('sr-cur',E.st.curse>0);ef.classList.toggle('sr-stn',E.st.stun>0||E.st.frz>0);
 $('en').textContent=E.n;$('est').textContent=stChips(E.st,0);const eb=eBlock();$('st').textContent='Lv '+Math.ceil(E.s*1.1)+' · '+D().ic;
-$('eskl').innerHTML=E.sk.map(k=>{let q=1;for(const c in k[1])q=Math.min(q,E.m[c]/k[1][c]);const m=skMeta(k,'');return'<span class="es'+(q>=1?' rdy':'')+'" data-skill-type="'+m.type+'" data-element="'+m.el+'" style="--p:'+Math.round(q*100)+'%" title="'+k[0]+' · '+DESC[k[2]]+'">'+ICON[k[2]]+'</span>'}).join('');
+hudH($('eskl'),E.sk.map(k=>{let q=1;for(const c in k[1])q=Math.min(q,E.m[c]/k[1][c]);const m=skMeta(k,'');return'<span class="es'+(q>=1?' rdy':'')+'" data-skill-type="'+m.type+'" data-element="'+m.el+'" style="--p:'+Math.round(q*100)+'%" title="'+k[0]+' · '+DESC[k[2]]+'">'+ICON[k[2]]+'</span>'}).join(''));
 {const pz=[];if(E.elite&&!E.boss)pz.push(['⭐','Elite: inflicts ailments']);if(E.tac)pz.push(['👑'+(3-E.tc%3),BT[E.act].n+' in '+(3-E.tc%3)+' turns']);if(E.boss)pz.push(E.enr?['😡','Enraged: skulls ×2, the board burns']:['⏳'+Math.max(0,16+LV('pvt')-(E.pt||0)),'Turns until enrage']);if(eb>0)pz.push(['🛡️'+Math.round(eb*100)+'%','Skull block chance']);$('epas').innerHTML=pz.map(x=>'<span class="ps" title="'+x[1]+'">'+x[0]+'</span>').join('')}
 $('esh').style.width=Math.min(100,100*E.arm/(E.mx*.4))+'%';
 $('loc').textContent=wl?wl.e+' '+wl.n:'♾️ Endless · Stage '+S.stage;$('lk').textContent=E.tac?'👑 '+BT[E.act].n+' in '+(3-E.tc%3):wl?(S.at<S.loc||S.done?'Grinding':E.boss?'⚔️ Guardian':'Fight '+(S.k+1)+'/'+wl.g):'';
 $('lp').style.width=wl&&S.at==S.loc&&!S.done?100*Math.min(S.k,wl.g)/wl.g+'%':'0%';
-$('eh').style.width=100*Math.max(0,E.hp)/E.mx+'%';$('et').textContent=Math.max(0,Math.ceil(E.hp))+' / '+E.mx+(E.arm>0?' · 🛡️ '+Math.floor(E.arm):'');$('emana').innerHTML='';
-sk.innerHTML='';bar().forEach((id,i)=>{const k=SKL[id],o=cost(k,0),ax=advSt(k),e=document.createElement('button');e.className='sk2';e.disabled=!can(P.m,o)||busy||sty;e.innerHTML='<i class="hk">'+(i+1)+'</i><b>'+(ICON[k[2]]||'✦')+' '+k[0]+(slv(id)>1?' <small>L'+slv(id)+'</small>':'')+(ax?' '+STN[ax][0]:'')+'</b><br>'+Object.keys(o).map(x=>'<span class="mc t'+x+'">'+o[x]+'</span>').join('');{const m=skMeta(k,S.cls);e.dataset.skillType=m.type;e.dataset.element=m.el;e.dataset.tags=m.type+' '+m.el+' '+k[2];e.title=k[0]+' · '+m.type+' · '+m.el}e.onclick=()=>castP(i);sk.append(e)})}
-spdB.innerHTML='⏩<br>×'+SPD();sk.append(spdB);syncBoard()}
+$('eh').style.width=100*Math.max(0,E.hp)/E.mx+'%';$('et').textContent=Math.max(0,Math.ceil(E.hp))+' / '+E.mx+(E.arm>0?' · 🛡️ '+Math.floor(E.arm):'');hudH($('emana'),'');
+/* v6.0.5 · skill bar: the buttons are rebuilt only when a label, cost, level or stance changes; otherwise only disabled is refreshed.
+   A gated slot (lockEl) keeps disabled=false and parks the real state in data-gwd, exactly as lockEl does on a fresh button. */
+{const it=bar().map((id,i)=>{const k=SKL[id],o=cost(k,0),ax=advSt(k),m=skMeta(k,S.cls);return{k,m,dis:!can(P.m,o)||busy||sty,h:'<i class="hk">'+(i+1)+'</i><b>'+(ICON[k[2]]||'✦')+' '+k[0]+(slv(id)>1?' <small>L'+slv(id)+'</small>':'')+(ax?' '+STN[ax][0]:'')+'</b><br>'+Object.keys(o).map(x=>'<span class="mc t'+x+'">'+o[x]+'</span>').join('')}}),
+ sig=it.map(x=>x.h+'\u0001'+x.m.type+'|'+x.m.el+'|'+x.k[2]).join('\u0002');
+ if(sk._bar!==sig||sk.children.length<it.length){sk._bar=sig;sk._h=null;sk.innerHTML='';it.forEach((x,i)=>{const e=document.createElement('button');e.className='sk2';e.innerHTML=x.h;e.dataset.skillType=x.m.type;e.dataset.element=x.m.el;e.dataset.tags=x.m.type+' '+x.m.el+' '+x.k[2];e.title=x.k[0]+' · '+x.m.type+' · '+x.m.el;e.onclick=()=>castP(i);sk.append(e)})}
+ it.forEach((x,i)=>{const e=sk.children[i];if(e.classList.contains('gate-locked')){if(x.dis)e.dataset.gwd='1';else delete e.dataset.gwd;e.disabled=false}else e.disabled=x.dis})}}
+{const h='⏩<br>×'+SPD();if(spdB._h!==h){spdB._h=h;spdB.innerHTML=h}}if(sk.lastChild!==spdB)sk.append(spdB);syncBoard()}
 function renderCls(){const el=$('cls');el.innerHTML='';for(const k in CL){const e=document.createElement('button');e.innerHTML=CL[k].i+' <b>'+k+'</b> Lv '+S.c[k].l+'<br><span class="m">'+CL[k].d+'</span><br><span class="m" style="color:#e9c88c">'+CLP[k].split(' · ')[0]+'</span>';e.className=k==S.cls?'on':'';e.onclick=()=>{if(busy)return;S.cls=k;wsel=-1;wcen=0;heal();$('clsm').hidden=true;upd()};el.append(e)}}
 function renderLevels(){$('skl').innerHTML=[['⚔️ Combat',[0,1,2,3,4]],['🌲 Gathering',[5,6,7,8]],['⚒️ Artisan',[9,10]]].map(([t,ix])=>'<h3 class="mt">'+t+'</h3>'+ix.map(i=>'<div class="row sp"><span>'+SK[i]+' <b>'+S.sk[i]+'</b></span><span class="m">'+SKD[i]+'</span></div><div class="bar"><i style="width:'+Math.min(100,100*(S.sx[i]||0)/sneed(S.sk[i]))+'%"></i></div>').join('<div style="height:5px"></div>')).join('')+'<div class="m mt">Gathering tiers (Bronze → Iron → Steel → Mithril → Rune) unlock at levels '+GLV.join(', ')+'. Foraging collects the reagent of the Act you gather in.</div>'}
 /* =====================================================================
@@ -2246,6 +2254,12 @@ $('mnew').onclick=()=>{if(S.hero&&!armed){armed=true;$('mnew').textContent='⚠�
 $('mhelp').onclick=()=>{$('mhelptx').hidden=!$('mhelptx').hidden};$('cback').onclick=showMenu;
 $('cgo').onclick=()=>newGame({name:$('hname').value.trim()||'Hero',cr:mk.cls,hue:HUES[mk.hi][1],lg:mk.lg,av:CL[mk.cls].i,look:AV.look({look:mkLook()}),hh:0});
 addEventListener('pagehide',save);
+/* v6.0.5 · the localStorage copy of the save is throttled: at most one JSON.stringify + setItem every 400 ms,
+   always of the latest S (IndexedDB is already coalesced by GGDB.write). Written at once when the page is hidden or unloaded. */
+var ggLsTimer=0;
+function ggLsWrite(){if(ggLsTimer){clearTimeout(ggLsTimer);ggLsTimer=0}try{localStorage.setItem('gg1',JSON.stringify(S))}catch(e){}}
+function ggLsSave(){if(document.visibilityState==='hidden'){ggLsWrite();return}if(!ggLsTimer)ggLsTimer=setTimeout(ggLsWrite,400)}
+addEventListener('pagehide',()=>{if(ggLsTimer)ggLsWrite()});
 /* offline camp rewards: evaluated by the boot sequence AFTER the save is restored, so the idle time is measured from the newest copy */
 function offlineCamp(){const m=Math.min(480,(Date.now()-S.t)/6e4);if(m>1)addXp(Math.floor(m*.5),0,2);if(m>=10&&S.hero){const n=Math.max(1,Math.min(24,Math.floor(m/20))),got=[];for(const k of['ore','log','fish']){const t=gtier(k);S.mat[k][t]+=n;got.push(MI[k]+' '+n+' '+MAT[k][t])}restNote='🏕️ While you were away ('+Math.floor(m)+' min), your camp gathered '+got.join(', ')+'.';save()}}
 /* ===== IN-BATTLE PAUSE MENU: freezes waits, VFX canvas and CSS animation; Restart / Retreat abandon the running combat chain ===== */
@@ -4517,7 +4531,7 @@ const OV=$('tutorialOverlayPane'),CV=$('tutCanvas'),G2=CV.getContext('2d'),BOX=$
 function queueTut(id){const t=ensureTut();if(t.done.includes(id)||Q.includes(id)||(TUT&&TUT.id==id))return;Q.push(id)}
 const vis=id=>{const e=$(id);return!!e&&!e.hidden};
 const safeNow=()=>hasHero()&&!TUT&&!thOn&&!busy&&!walking&&!dead&&!vis('gl')&&!vis('pm')&&!vis('itm')&&!vis('potm')&&!vis('clsm')&&!vis('menu')&&!vis('create')&&!vis('storyTheaterModal')&&!(window.GGDB&&!GGDB.status().ready);
-function showTut(id,replay){const T=PM.tutorials[id];if(!T)return;TUT={id,replay:!!replay,target:T.target};
+function showTut(id,replay){const T=PM.tutorials[id];if(!T)return;TUT={id,replay:!!replay,target:T.target};tutWake();
  $('tutTitle').textContent=T.title;$('tutKick').textContent=replay?'The Codex · Replay':'The Codex · New Entry';
  let n=0;const lines=[];$('tutText').innerHTML=T.text.split(/\n\s*\n/).map(p=>'<p>'+sentences(p).map(s=>{lines.push(stripEmo(s));return'<span data-n="'+(n++)+'">'+esc(s)+'</span>'}).join(' ')+'</p>').join('');TUT.lines=lines;
  if(!PAUSED){PAUSED=1;ownPause=1;document.body.classList.add('paused')}if(!sty){sty=true;ownSty=1}
@@ -4561,17 +4575,22 @@ GGLife.onResize(()=>{if(TUT){sizeCv();placeBox()}});
    5. 60 FPS EVALUATION LOOP (requestAnimationFrame; idles while the tab is hidden)
    ================================================================= */
 let lastPlace=0,lastEval=-1e9;
-/* the spotlight repaints every frame while a Codex entry is open; gate checks run at 4 Hz (every draw() also validates instantly) */
-function frame(ts){requestAnimationFrame(frame);if(document.hidden||!hasHero())return;
+/* v6.0.5 · the spotlight repaints every frame (requestAnimationFrame) only while a Codex entry is open;
+   otherwise the gate checks run on a 4 Hz timer, so the page can idle between frames (every draw() also validates instantly) */
+let tutRaf=0,tutTm=0;
+function tutNext(){if(tutRaf||tutTm)return;if(TUT)tutRaf=requestAnimationFrame(frame);else tutTm=setTimeout(()=>{tutTm=0;frame(performance.now())},250)}
+function tutWake(){if(!looping)return;if(tutTm){clearTimeout(tutTm);tutTm=0}if(!tutRaf)tutRaf=requestAnimationFrame(frame)}
+function frame(ts){tutRaf=0;try{tutStep(ts)}finally{tutNext()}}
+function tutStep(ts){if(document.hidden||!hasHero())return;
  if(TUT){paintCv(ts);if(ts-lastPlace>250){lastPlace=ts;placeBox()}return}
- if(ts-lastEval<250)return;lastEval=ts;ensureTut();validateProgressionLocks();
+ if(ts-lastEval<240)return;lastEval=ts;ensureTut();validateProgressionLocks();
  const t=S.tut;
  /* view / entry triggers */
  if(conOpen&&['lab','pets'].includes(conTab)){const g=PM.gates[conTab];if(gateOpen(conTab)&&!t.done.includes(g.tutorial))queueTut(g.tutorial)}
  if(vaultOn()&&curTab=='battle'&&!conOpen&&!t.done.includes('infinite_vault'))queueTut('infinite_vault');
  /* skill-slot tutorials only make sense once the bar is on screen */
  if(Q.length&&safeNow()){const i=Q.findIndex(id=>!/^slot_/.test(id)||(curTab=='battle'&&!conOpen&&!GT));if(i>=0){const id=Q.splice(i,1)[0];if(!t.done.includes(id))showTut(id)}}}
-let looping=0;const boot=()=>{ensureTut();validateProgressionLocks();if(!looping){looping=1;requestAnimationFrame(frame)}};
+let looping=0;const boot=()=>{ensureTut();validateProgressionLocks();if(!looping){looping=1;tutNext()}};
 
 /* =================================================================
    6. CODEX IN SETTINGS (replay any entry already earned)
@@ -6895,7 +6914,10 @@ function sync(){if(!slotL||typeof S!='object')return;const b=best(),n=mastered()
  slotR.setAttribute('aria-label',b>=0?'Highest difficulty badge: '+name(b)+'. Open Hall of Honors':'No difficulty badge yet. Open Hall of Honors');
  slotL.setAttribute('aria-label',n?'Class mastery medal: '+MASTERY_MEDALS[n-1].n+'. Open Hall of Honors':'No class mastered yet. Open Hall of Honors')}
 if(avw){try{new ResizeObserver(()=>fit()).observe(avw)}catch(e){addEventListener('resize',fit)}}
-const _draw=draw;draw=function(){const r=_draw.apply(this,arguments);try{sync();fit()}catch(e){}return r};
+/* v6.0.5 · fit() reads layout (getBoundingClientRect); calling it inside every draw() forced a synchronous relayout each time.
+   It now runs at most once per frame, just before paint (fit() itself bails out while the hero panel is hidden). */
+let g6fitQ=0;const fitSoon=()=>{if(g6fitQ||!avw)return;g6fitQ=requestAnimationFrame(()=>{g6fitQ=0;try{fit()}catch(e){}})};
+const _draw=draw;draw=function(){const r=_draw.apply(this,arguments);try{sync();fitSoon()}catch(e){}return r};
 try{sync()}catch(e){}
 
 window.GG60={NT,DIFF_BADGES,MASTERY_MEDALS,tier,unlocked,name,label,opts,desc,setTier,cleared,best,bestLoc,anyDone,slotInfo,migrate:v60migrate,
@@ -7018,8 +7040,10 @@ cast=async function(k,who){
 
 <!-- v6.0 BAKED BALANCE PROFILE: written by the ⚖️ Balance tab (📦 Build index.html / ⬆ Push). Builds with a newer stamp replace older local slider values on every device. -->
 <script id="dbal-baked" type="application/json">{"stamp":null,"prof":[]}</script>
-<!-- PLAYTESTING DEBUG TOOLS: delete this entire <script> element to remove every debug control. Nothing else in the game references it. -->
-<script id="debug-tools">
+<!-- PLAYTESTING DEBUG TOOLS: delete this entire <script> element to remove every debug control. Nothing else in the game references it.
+     v6.0.5: inert by default (type="text/plain"). The loader right after it runs it only in debug mode:
+     open the game once with ?debug=1 (remembered on this device), ?debug=0 turns it off again. -->
+<script id="debug-tools" type="text/plain">
 /* PLAYTESTING DEBUG TOOLS */
 /* Autoplay bot + Auto-Continue + Auto-Retry. Self-contained: it only reads game globals and wraps win()/die() from the outside. */
 /* Hidden collapsible console #debugTestingConsole: toggled by the tiny cog in the bottom-left corner, or the ` (backtick) / F2 keys. Esc closes it.
@@ -8025,6 +8049,17 @@ if(window.QARec){const r0=QARec.report;QARec.report=function(){const r=r0.apply(
 return{analyse,suggest,paint,get sources(){return src},get suggestions(){return sugg}}})();
 
 /* END PLAYTESTING DEBUG TOOLS */
+</script>
+<script id="debug-loader">
+/* v6.0.5 · debug-mode switch. Off: the debug console, autoplay/QA bots, bug monitor and their timers never load.
+   Only the baked ⚖️ balance profile is still applied (a read-only window.DBAL), so players get the same balance either way. */
+(()=>{let on=false;try{const q=new URLSearchParams(location.search).get('debug');if(q!=null)localStorage.setItem('gg_debug',q==='0'||q==='off'?'0':'1');on=localStorage.getItem('gg_debug')==='1'}catch(e){}
+ if(on){const src=document.getElementById('debug-tools'),s=document.createElement('script');s.id='debug-tools-live';s.textContent=src.textContent;src.after(s);return}
+ try{let prof=null;const el=document.getElementById('dbal-baked'),b=el&&JSON.parse(el.textContent||'{}');let o=null;try{o=JSON.parse(localStorage.getItem('gg_dbal')||'null')}catch(_){}
+  /* same choice the Balance tab makes: a newer baked build wins, otherwise the sliders saved on this device */
+  if(b&&b.stamp&&Array.isArray(b.prof)&&(!o||o.base!==b.stamp))prof=b.prof;else if(o&&Array.isArray(o.prof))prof=o.prof;
+  if(!prof||!prof.some(p=>p&&typeof p=='object'&&Object.keys(p).length))return;
+  window.DBAL={m(k){const d=(window.S&&Number.isInteger(S.diff))?S.diff:2,p=prof[d],v=p&&p[k];return v>=1&&v<=100&&v!=50?1+(v-50)/100:1}}}catch(e){}})();
 </script>
 
 
