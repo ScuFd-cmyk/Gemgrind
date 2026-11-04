@@ -1030,6 +1030,32 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
+/* v6.1 · LAYER CONSOLIDATION · named layer chains for the combat core.
+   These functions had layers that replace the original (Vault / Challenge victory and defeat), bracket it (flags set around
+   the call in try/finally) or rewrite its arguments, so they can't be plain hooks. Each layer is now one labelled entry:
+   layer(name, label, inner => function(...){...}) receives the chain below it ('inner', the old _name variable, unchanged)
+   and returns its wrapper, exactly like the old `const _x=x; x=function(){...}` lines, composed in the same document order.
+   The global function is a dispatcher to the top of its chain. GGLayers() lists every chain's layers (innermost first).
+   The debug tools still wrap win()/die()/hit() etc. from outside with their own wrap(), as before. */
+const CHAIN={},layer=(n,label,make)=>{const c=CHAIN[n];if(!c)throw new Error('layer(): unknown chain '+n);c.fn=make(c.fn);c.layers.push(label)};
+window.GGLayers=()=>Object.fromEntries(Object.entries(CHAIN).map(([k,v])=>[k,v.layers.slice()]));
+for(const[n,f]of[['win',winBase],['die',dieBase],['hit',hitBase],['pdmg',pdmgBase],['foe',foeBase],['turnTick',turnTickBase],['roundEnd',roundEndBase],['resolve',resolveBase],['castP',castPBase],['cast',castBase],['restartBattle',restartBattleBase],['retreat',retreatBase],['drop',dropBase],['usePot',usePotBase],['bossTactic',bossTacticBase]])CHAIN[n]={fn:f,layers:['base']};
+function win(){return CHAIN.win.fn.apply(this,arguments)}
+function die(){return CHAIN.die.fn.apply(this,arguments)}
+function hit(){return CHAIN.hit.fn.apply(this,arguments)}
+function pdmg(){return CHAIN.pdmg.fn.apply(this,arguments)}
+function foe(){return CHAIN.foe.fn.apply(this,arguments)}
+function turnTick(){return CHAIN.turnTick.fn.apply(this,arguments)}
+function roundEnd(){return CHAIN.roundEnd.fn.apply(this,arguments)}
+function resolve(){return CHAIN.resolve.fn.apply(this,arguments)}
+function castP(){return CHAIN.castP.fn.apply(this,arguments)}
+function cast(){return CHAIN.cast.fn.apply(this,arguments)}
+function restartBattle(){return CHAIN.restartBattle.fn.apply(this,arguments)}
+function retreat(){return CHAIN.retreat.fn.apply(this,arguments)}
+function drop(){return CHAIN.drop.fn.apply(this,arguments)}
+function usePot(){return CHAIN.usePot.fn.apply(this,arguments)}
+function bossTactic(){return CHAIN.bossTactic.fn.apply(this,arguments)}
+
 /* ===== core data ===== */
 const $=i=>document.getElementById(i);
 const G=['🔥','⚡','🌿','💧','🔮','🪨','💀','✖'],GN=['Ruby','Topaz','Emerald','Sapphire','Amethyst','Amber','Skull','Cursed Rock'],N=7,CAP_I=40;let CAP=20;
@@ -1337,7 +1363,7 @@ const penBl=()=>.04*S.fg.pen+stat().pen,eBlock=()=>E?Math.max(0,Math.min(.9,(E.b
 function intro(cb){const w=cur();if(!w){if(cb)cb();return}const A=ACTS[w.a],newAct=w.j==0&&w.ci%10==0,ttl=w.e+' '+w.n,kk=A.n+' · '+A.t+' · '+w.c+' · '+w.k,lead=(newAct?A.story+'\n\n':'')+w.i;
 if(processChronosStage(w.a+1,w.ci+1,chronosCity(w.j,w.B),cb,{title:ttl,kicker:kk,lead}))return;if(w.j%5==0||w.B)theater(ttl,kk,lead,cb);else{msg(w.e+' '+w.n+': '+w.i);if(cb)cb()}}
 function settle(){if(pnext){const f=pnext;pnext=null;f();draw()}if(bq&&!busy){newBoard();draw()}}
-function win(){if(GT||E.dead)return;E.dead=true;const from=S.at,w=cur(),d=D(),st=stat(),s=E.s,boss=E.boss,em=E.elite&&!boss?1.5:1,xw=Math.floor(15*s*(1+s*.15)*d.r*em),g=Math.floor((6+4*s)*st.gold*(boss?3:1)*d.r*em),c=C(),l0=c.l;
+function winBase(){if(GT||E.dead)return;E.dead=true;const from=S.at,w=cur(),d=D(),st=stat(),s=E.s,boss=E.boss,em=E.elite&&!boss?1.5:1,xw=Math.floor(15*s*(1+s*.15)*d.r*em),g=Math.floor((6+4*s)*st.gold*(boss?3:1)*d.r*em),c=C(),l0=c.l;
 addXp(xw);S.gold+=g;qev('kill');if(boss)qev('boss');qev('gold',g);const lt=drop();
 const R=[['✨ '+S.cls+' XP','+'+Math.round(xw*st.xp)],['🪙 Gold','+'+g]];if(c.l>l0)R.push(['🆙 Level up','Lv '+c.l+' · +'+(c.l-l0)+' passive pt']);
 for(const it of lt)R.push(['🎁 Victory Chest',SI[it.sl]+' '+iname(it)+(it._sold?' <span class="m">(bag full · sold for 🪙 '+it._sold+')</span>':'')]);if(boss){const e=1+((s/30)|0);S.ess+=e;R.push(['✨ Essence','+'+e])}
@@ -1351,7 +1377,7 @@ save();
 if(S.opt.qr&&!boss&&!story&&!lt.length&&c.l==l0){fl('🏆 +'+Math.round(xw*st.xp)+' XP · +'+g+' 🪙','#ffd27a','ecard');pnext=next;return}
 rew(boss?'👑 Guardian slain':E.elite?'⭐ Elite defeated':'🏆 Victory',esc(E.n)+' defeated · '+d.ic+' '+d.n,R,story,[['🗺️ Continue journey',next,'on']])}
 const PITY=.125;function defeatPity(){if(GT||!E)return{x:0,g:0};const d=D(),st=stat(),s=E.s||1,boss=E.boss,em=E.elite&&!boss?1.5:1,xw=Math.floor(15*s*(1+s*.15)*d.r*em),g=Math.floor((6+4*s)*st.gold*(boss?3:1)*d.r*em);/* v6.0.5 · audit W3: effort-weighted purse: 20% of it for showing up, the rest for the share of HP taken off the foe (still never zero) */const share=E.mx>0?Math.min(1,Math.max(0,(E.mx-Math.max(0,E.hp))/E.mx)):0,k=PITY*(.2+.8*share);return{x:Math.max(1,Math.round(xw*k)),g:Math.max(1,Math.round(g*k))}}
-function die(){if(dead)return;if(!GT&&E&&!P.rez&&stat().ks.phoenix){P.rez=1;P.hp=stat().hp*.3;P.st={burn:0,poison:0};fl('🪶 PHOENIX RITE!','#ffb347','bw',1);msg('Phoenix Rite: you rise from the ashes at 30% HP!');draw();return}dead=true;
+function dieBase(){if(dead)return;if(!GT&&E&&!P.rez&&stat().ks.phoenix){P.rez=1;P.hp=stat().hp*.3;P.st={burn:0,poison:0};fl('🪶 PHOENIX RITE!','#ffb347','bw',1);msg('Phoenix Rite: you rise from the ashes at 30% HP!');draw();return}dead=true;
 /* v3.4 no-loss defeat: nothing is taken from gold, shards, materials or the bag. A flat pity purse of 12.5% of this node's victory yield (same formula as win()) is paid instead. */
 const pity=defeatPity(),c=C(),l0=c.l;RETRY={stage:S.stage,cm:S.cm};if(pity.x)addXp(pity.x);if(pity.g)S.gold+=pity.g;if(!S.cm)S.stage=Math.max(1,S.stage-1);save();
 const back=()=>{dead=false;newEnemy();heal();journey(S.at);draw()},PR=[['✨ Consolation XP','+'+Math.round(pity.x*stat().xp)],['🪙 Consolation Gold','+'+pity.g]];if(c.l>l0)PR.push(['🆙 Level up','Lv '+c.l+' · +'+(c.l-l0)+' passive pt']);PR.push(['🛡️ Nothing lost','Gold, shards, materials and gear are safe'],['⚙️ Difficulty',D().ic+' '+D().n]);
@@ -1558,7 +1584,7 @@ return{id:'i'+(++uid)+Math.floor(Math.random()*1e6),sl:slot,n:(fp?fp[0]+' ':rar>
 function rollR(boss,rng){const w=boss?[10,40,35,13,2]:[60,28,9,2.6,.4];let x=(rng||Math.random)()*w.reduce((a,b)=>a+b),i=0;while(i<4&&x>w[i]){x-=w[i];i++}return i}
 function gear(){const g={};for(const k of GK)g[k]=0;for(const s in S.eq){const it=S.eq[s];if(it)for(const k in it.st)g[k]=(g[k]||0)+it.st[k]}return g}
 const relicR=r=>r<2&&Math.random()<.04*LV('rel')?2:r;
-function drop(){const ch=E.boss?1:E.elite?.6:.3,n=Math.random()<ch?(E.boss&&Math.random()<.4?2:1):0,t=[];for(let q=0;q<n;q++){const it=genItem(C().l,null,Math.min(4,relicR(rollR(E.boss))+(E.elite&&!E.boss&&Math.random()<.3?1:0)));if(S.inv.length>=CAP_I){it._sold=sellP(it);S.gold+=it._sold}else S.inv.push(it);qev('loot');t.push(it)}return t}
+function dropBase(){const ch=E.boss?1:E.elite?.6:.3,n=Math.random()<ch?(E.boss&&Math.random()<.4?2:1):0,t=[];for(let q=0;q<n;q++){const it=genItem(C().l,null,Math.min(4,relicR(rollR(E.boss))+(E.elite&&!E.boss&&Math.random()<.3?1:0)));if(S.inv.length>=CAP_I){it._sold=sellP(it);S.gold+=it._sold}else S.inv.push(it);qev('loot');t.push(it)}return t}
 const fmt=st=>Object.keys(st).map(k=>'+'+st[k]+(FLAT.has(k)?' ':'% ')+(LB[k]||k)).join(' · '),iname=it=>'<span style="color:'+RC[it.r]+';font-weight:700">'+esc(it.n)+'</span>',sellP=it=>Math.floor(it.v*.4),salvP=it=>Math.max(1,Math.ceil(it.l/10*(1+it.r))),buyP=it=>Math.round(it.v*1.6),potP=()=>Math.round(30*(1+S.loc/40));
 const hi=(a,b)=>b.r-a.r||b.l-a.l,bySlot=(a,b)=>SLOT4.indexOf(a.sl)-SLOT4.indexOf(b.sl)||hi(a,b),bagList=()=>S.inv.filter(it=>S.opt.flt=='all'||it.sl==S.opt.flt).sort(S.opt.srt=='s'?bySlot:hi),potN=()=>Object.values(S.alc).reduce((a,b)=>a+b,0);
 function equip(id){const it=take(id);if(!it)return;if(S.eq[it.sl])S.inv.push(S.eq[it.sl]);S.eq[it.sl]=it;closeM()}
@@ -1592,7 +1618,7 @@ else if(stab=='sell')h+=S.inv.length?[...S.inv].sort((a,b)=>hi(b,a)).map(it=>iro
 else h+='<div class="row sp" style="margin:5px 0"><span><b>❤️ Health Potion</b> <span class="m">restores 40% HP · you have '+S.alc.hp+'</span></span><span>'+bt('pot:1','🪙 '+potP())+' '+bt('pot:5','×5')+'</span></div><div class="m">Mana, Shield and Cleanse potions can only be brewed. Find them under Craft → Alchemy.</div>';
 $('shp').innerHTML=h}
 /* drinking a potion is a full action: it locks the board and passes control to the enemy */
-function usePot(k){$('potm').hidden=true;return(async()=>{if(busy||sty||GT||PAUSED||!(S.alc[k]>0))return;snapP();busy=true;S.alc[k]--;const st=stat(),a=st.alc;
+function usePotBase(k){$('potm').hidden=true;return(async()=>{if(busy||sty||GT||PAUSED||!(S.alc[k]>0))return;snapP();busy=true;S.alc[k]--;const st=stat(),a=st.alc;
 if(k=='hp'){const h=st.hp*.4*a*(st.ks.vamp?.5:1)*(1+.1*S.lab.eli)*(1+.12*LV('apo'))*BAL.psk;healP(h);fl('+'+Math.round(h)+' HP','#4ade80')}
 else if(k=='mp'){const v=Math.round(4*a);P.m=P.m.map(x=>Math.min(CAP,x+v));fl('+'+v*6+' Mana','#7dd3fc')}
 else if(k=='sh'){const v=st.cap*.6*a*BAL.psk;addArm(v);fl('+'+Math.round(v)+' Shield','#93c5fd')}
@@ -1791,17 +1817,17 @@ function eliteHex(){const a=E.act;inflict('p',a==1?'burn':a==2?'poison':a==3?'fr
 let curK=null;
 /* every player heal funnels through here; Thorn Barrier banks the overheal */
 function healP(v){const st=stat(),room=Math.max(0,st.hp-P.hp);if(v<=room){P.hp+=v;return}P.hp=Math.max(P.hp,st.hp);if(st.ks.thorns)P.thorn=Math.min(st.hp*.5,(P.thorn||0)+v-room)}
-function hit(d){if(E.dead)return 0;const st=stat(),g=gear(),sm9=curK?skMeta(curK,S.cls).type:'physical',cr=Math.random()<st.crit+(sm9=='physical'?.03*LV('prc'):0);d*=st.dmg*(cr?1.75*BX('crit')/*BX*/:1)*BX('all_p')/*BX*/*(E.st.sund>0?1.2:1)*(E.st.curse>0?1.15:1);if(E.arm>0){let cp=0;if(curK)for(const c in curK[1])cp=Math.max(cp,g['pg'+c]||0);const pe=Math.min(.9,.05*S.fg.pen+(g.pen+cp)/100+(sm9=='magical'?.06*LV('swp'):0)),a=Math.min(E.arm,d*(1-pe));E.arm-=a;d-=a}const dealt=Math.max(0,Math.min(d,E.hp));S.ach.dmg+=dealt;E.hp-=d;if(g.ls+st.lsx>0&&dealt>0)healP(dealt*(g.ls+st.lsx)/100);
+function hitBase(d){if(E.dead)return 0;const st=stat(),g=gear(),sm9=curK?skMeta(curK,S.cls).type:'physical',cr=Math.random()<st.crit+(sm9=='physical'?.03*LV('prc'):0);d*=st.dmg*(cr?1.75*BX('crit')/*BX*/:1)*BX('all_p')/*BX*/*(E.st.sund>0?1.2:1)*(E.st.curse>0?1.15:1);if(E.arm>0){let cp=0;if(curK)for(const c in curK[1])cp=Math.max(cp,g['pg'+c]||0);const pe=Math.min(.9,.05*S.fg.pen+(g.pen+cp)/100+(sm9=='magical'?.06*LV('swp'):0)),a=Math.min(E.arm,d*(1-pe));E.arm-=a;d-=a}const dealt=Math.max(0,Math.min(d,E.hp));S.ach.dmg+=dealt;E.hp-=d;if(g.ls+st.lsx>0&&dealt>0)healP(dealt*(g.ls+st.lsx)/100);
 if(d>.5){if(cr){fl('💥 CRIT! -'+Math.round(d),'#ffd23f','ecard',0,'crit');if(!RM()){const ec=$('ecard');ec.classList.remove('chit');void ec.offsetWidth;ec.classList.add('chit');setTimeout(()=>ec.classList.remove('chit'),400)}}else fl('-'+Math.round(d)+' DMG','#f0a050','ecard')}achCheck();if(st.ks.vamp&&dealt>0)healP(dealt*.15);if(E.hp<=0&&!sty&&!dead)win();return dealt}
 async function atk(h,keep){const b=$('ef'),t=$('turnb');if(!keep)t.textContent=h?'⚠️ Heavy strike!':'Enemy turn…';t.hidden=false;b.classList.remove('lunge','hv');void b.offsetWidth;b.classList.add('lunge');if(h)b.classList.add('hv');await wait(h?420:280)}
 async function hurt(d,ab,h){const c=$('pcard');c.classList.remove('hit');void c.offsetWidth;c.classList.add('hit');
 if(d>0)fl('-'+Math.round(d)+' DMG'+(ab>.5?' (🛡️'+Math.round(ab)+')':''),'#ef4444');else fl('🛡️ Blocked','#60a5fa');
 draw();await wait(h?650:450);c.classList.remove('hit');$('ef').classList.remove('lunge','hv');$('turnb').hidden=true}
-async function pdmg(d,h){d*=D().ed*(E&&E.st&&E.st.curse>0?.75:1)*BX('all_e')/*BX*/;if(d>0&&Math.random()<stat().dodge){fl('💨 DODGED!','#c9f3ff');sfx('whoosh');draw();await wait(h?420:320);$('ef').classList.remove('lunge','hv');$('turnb').hidden=true;return}const ab=Math.min(P.arm,d);P.arm-=ab;d-=ab;if(P.thorn>0&&d>0&&E&&!E.dead){const r=Math.min(P.thorn,d);P.thorn-=r;d-=r;E.hp-=r*BX('thorns_p')/*BX*/;fl('🌹 Thorns reflect '+Math.round(r),'#86efac','ecard');}P.hp-=d;await hurt(d,ab,h);/* v5.4 audit 62: defeat still wins a simultaneous KO, but a Phoenix revive must not leave a dead enemy standing */if(P.hp<=0)die();if(!dead&&E&&E.hp<=0&&!E.dead&&!sty)win()}
+async function pdmgBase(d,h){d*=D().ed*(E&&E.st&&E.st.curse>0?.75:1)*BX('all_e')/*BX*/;if(d>0&&Math.random()<stat().dodge){fl('💨 DODGED!','#c9f3ff');sfx('whoosh');draw();await wait(h?420:320);$('ef').classList.remove('lunge','hv');$('turnb').hidden=true;return}const ab=Math.min(P.arm,d);P.arm-=ab;d-=ab;if(P.thorn>0&&d>0&&E&&!E.dead){const r=Math.min(P.thorn,d);P.thorn-=r;d-=r;E.hp-=r*BX('thorns_p')/*BX*/;fl('🌹 Thorns reflect '+Math.round(r),'#86efac','ecard');}P.hp-=d;await hurt(d,ab,h);/* v5.4 audit 62: defeat still wins a simultaneous KO, but a Phoenix revive must not leave a dead enemy standing */if(P.hp<=0)die();if(!dead&&E&&E.hp<=0&&!E.dead&&!sty)win()}
 function cost(k,who){const s0=who?null:stat(),m=who?1:s0.cm*(SKCLS[k[0]]==S.cls?1-s0.cdr:1),o={};for(const c in k[1])o[c]=Math.min(CAP,Math.ceil(k[1][c]*m));return o}
 const can=(m,o)=>Object.keys(o).every(c=>m[c]>=o[c]),pay=(m,o)=>{for(const c in o)m[c]-=o[c]};
 function skulls(v){const c=[];B.forEach((g,i)=>{if(isM(g)&&g!=6)c.push(i)});for(let n=0;n<v&&c.length;n++)B[c.splice(Math.floor(Math.random()*c.length),1)[0]]=6}
-async function cast(k,who){const st=stat(),e=k[2],v=k[3]*(who?1:sm(slv(k[0]))*BAL.psk);fl(k[0],'#ffd27a',who?'ecard':'pcard');
+async function castBase(k,who){const st=stat(),e=k[2],v=k[3]*(who?1:sm(slv(k[0]))*BAL.psk);fl(k[0],'#ffd27a',who?'ecard':'pcard');
 if(who){if(e=='dmg'){await atk(0,1);await pdmg(E.at*v*BX('es:'+k[0])/*BX*/,0)}else if(e=='arm')E.arm+=E.at*v*.7;else if(e=='heal')E.hp=Math.min(E.mx,E.hp+E.mx*v*.6);else if(e=='sk')skulls(v)}
 else{curK=k;const off=OFFE.has(e),ch=off&&P.cc>1?P.cc:1,pw=st.pow*cmul(k,st.cd)*ch,hm=(st.ks.vamp?.5:1)*st.heal,ex=st.ks.exec&&E.hp<E.mx*.35?1.6:1,H0=E.hp,D0=st.atk*v*pw*st.skp*ex*BX('ps:'+k[0])/*BX*/;if(ch>1){fl('⚡ COMBO ×'+fmtM(ch)+' SKILL!','#ffd23f','bw',1);P.cc=1}
 if(e=='dmg')hit(D0);else if(e=='arm')addArm(st.arm*v*st.pow);else if(e=='heal')healP(st.hp*v*st.pow*hm);
@@ -1820,11 +1846,11 @@ if((S.cls=='Paladin'||S.cls=='Mythos')&&off&&E.hp<H0){const r=(H0-Math.max(0,E.h
 const sx=advSt(k);curK=null;if(sx&&!E.dead)inflict('e',sx,3)}
 draw();await wait(450)}
 /* casting a class skill: projectile flight, impact, then the turn passes to the enemy */
-async function castP(i){if(busy||sty||GT||dead||PAUSED||!E||E.dead||E.hp<=0)return;const ids=bar();if(!Number.isInteger(i)||i<0||i>=ids.length)return;const id=ids[i],k=SKL[id];if(!k||!avail(S.cls).includes(id)||!owned(id))return;if(k[2]=='sacr'&&P.hp<=stat().hp*.15){msg('Not enough HP to pay Blood Sacrifice.');return}const o=cost(k,0);if(!can(P.m,o))return;busy=true;let effectStarted=false;try{sel=null;hint=[];pay(P.m,o);msg('You cast '+k[0]+'! Your turn is spent.');qev('cast');draw();snapP();{const m=skMeta(k,S.cls);try{await skFx($('skills').children[i],k,S.cls,m.off?$('ef'):portrait(),0)}catch(err){console.warn('Gemgrind skill animation failed; resolving cast without animation.',err);fl('⚠️ Spell effect continues without animation','#ffd27a','pcard')}}effectStarted=true;await cast(k,0);if(stat().ks.echo&&Math.random()<.25&&!E.dead&&!sty&&!dead){fl('🔁 SPELL ECHO!','#e9d5ff','bw',1);await cast(k,0)}if(has3()&&!E.dead&&!sty&&!dead)await resolve(0);addXp(3,2,1);turnTick();
+async function castPBase(i){if(busy||sty||GT||dead||PAUSED||!E||E.dead||E.hp<=0)return;const ids=bar();if(!Number.isInteger(i)||i<0||i>=ids.length)return;const id=ids[i],k=SKL[id];if(!k||!avail(S.cls).includes(id)||!owned(id))return;if(k[2]=='sacr'&&P.hp<=stat().hp*.15){msg('Not enough HP to pay Blood Sacrifice.');return}const o=cost(k,0);if(!can(P.m,o))return;busy=true;let effectStarted=false;try{sel=null;hint=[];pay(P.m,o);msg('You cast '+k[0]+'! Your turn is spent.');qev('cast');draw();snapP();{const m=skMeta(k,S.cls);try{await skFx($('skills').children[i],k,S.cls,m.off?$('ef'):portrait(),0)}catch(err){console.warn('Gemgrind skill animation failed; resolving cast without animation.',err);fl('⚠️ Spell effect continues without animation','#ffd27a','pcard')}}effectStarted=true;await cast(k,0);if(stat().ks.echo&&Math.random()<.25&&!E.dead&&!sty&&!dead){fl('🔁 SPELL ECHO!','#e9d5ff','bw',1);await cast(k,0)}if(has3()&&!E.dead&&!sty&&!dead)await resolve(0);addXp(3,2,1);turnTick();
 if(!E.dead&&!sty&&!dead&&E.hp>0){fl('⏳ Turn spent','#cbd5e1','pcard');await foe()}
 await ensure();save()}catch(err){console.error('Gemgrind skill cast interrupted.',err);if(!effectStarted){for(const c in o)P.m[c]=Math.min(CAP,(P.m[c]||0)+o[c]);fl('⚠️ Cast interrupted — mana refunded','#ffd27a','pcard')}else fl('⚠️ Combat action interrupted','#ffd27a','pcard')}finally{busy=false;settle();upd();draw()}}
 async function eskill(){const o=E.sk.filter(k=>can(E.m,k[1])&&!(k[2]=='heal'&&E.hp>E.mx*.6)&&!(k[2]=='arm'&&E.arm>E.mx*.25));if(!o.length)return;const k=o[Math.floor(Math.random()*o.length)],t=$('turnb');pay(E.m,k[1]);t.hidden=false;t.textContent='✨ '+E.n+' casts '+k[0]+'!';draw();await wait(300);{const m=skMeta(k,''),sl=$('eskl').children[E.sk.indexOf(k)];try{await skFx(sl,k,'',m.off?portrait():$('ef'),1)}catch(err){console.warn('[Gemgrind] Enemy skill animation failed; resolving effect anyway.',err)}}await cast(k,1)}
-async function bossTactic(){const a=E.act,T=BT[a],t=$('turnb');t.hidden=false;t.textContent='👑 '+T.n+'!';fl(T.n.toUpperCase()+'!','#f5cb52','bw',1);await wait(650);
+async function bossTacticBase(){const a=E.act,T=BT[a],t=$('turnb');t.hidden=false;t.textContent='👑 '+T.n+'!';fl(T.n.toUpperCase()+'!','#f5cb52','bw',1);await wait(650);
 const rocks=pool=>{const lim=Math.max(0,12-B.filter(v=>v==7).length);pool.filter(i=>B[i]!=6).slice(0,lim).forEach(i=>{B[i]=7;SP[i]=0})};
 if(a==0){const x=Math.floor(Math.random()*N),col=[];for(let y=0;y<N;y++){const i=y*N+x;if(isM(B[i])&&!FZ[i])col.push(i)}rocks(pickN(col,4))}
 else if(a==1){rocks(pickN(freeT(),5));inflict('p','burn',3)}
@@ -1835,8 +1861,8 @@ syncBoard();cosmos();draw();await wait(450);if(has3())await resolve(1);await ens
 function cosmos(){const L=LV('cos');if(!L||GT||!E||E.dead||dead)return;const st=stat(),v=Math.max(0,st.hp-P.hp)*.02*L;if(v<1)return;P.hp=Math.min(st.hp,P.hp+v);fl('✴️ Cosmos Defiance +'+Math.round(v)+' HP','#e9d5ff','pcard')}
 /* boss clock: more than 15 player turns -> ENRAGED (skulls x2, permanent burning border) */
 function weave(){const L=[];B.forEach((v,i)=>{if(v==7||FZ[i]>0)L.push(i)});if(!L.length)return;const i=L[Math.floor(Math.random()*L.length)];FZ[i]=0;if(B[i]==7){B[i]=refillGem();SP[i]=0}fl('♨️ Thawing Rune frees a tile','#c9f3ff','pcard');syncBoard()}
-function turnTick(){if(!E||GT||E.dead)return;E.pt=(E.pt||0)+1;if(E.pt%3==0&&stat().ks.weaver)weave();if(E.boss&&!E.enr&&E.pt>15+LV('pvt')){E.enr=1;fl('😡 ENRAGED!','#ff3a2a','bw',1);msg(E.n+' is ENRAGED! Its skulls hit twice as hard and the board burns every round.');syncBoard()}}
-async function roundEnd(){const st=stat();let any=0;
+function turnTickBase(){if(!E||GT||E.dead)return;E.pt=(E.pt||0)+1;if(E.pt%3==0&&stat().ks.weaver)weave();if(E.boss&&!E.enr&&E.pt>15+LV('pvt')){E.enr=1;fl('😡 ENRAGED!','#ff3a2a','bw',1);msg(E.n+' is ENRAGED! Its skulls hit twice as hard and the board burns every round.');syncBoard()}}
+async function roundEndBase(){const st=stat();let any=0;
 if(E.enr&&!E.dead)P.st.burn=Math.max(P.st.burn,1);if(P.st.burn>0){const d=Math.max(1,st.hp*(E.enr?.09:.05)*BX('dot_burn_p')/*BX*/);P.hp-=d;fl('🔥 -'+Math.round(d)+' DMG','#ff7a3a','pcard');P.st.burn--;any=1}
 if(P.st.poison>0){let l=0;P.m=P.m.map(v=>{const n=Math.max(0,v-2);l+=v-n;return n});fl('☠️ -'+l+' Mana','#a3e635','pcard');P.st.poison--;any=1}
 if(E.st.burn>0&&!E.dead){const d=Math.max(1,E.mx*.04*BX('dot_burn_e')/*BX*/);E.hp-=d;fl('🔥 -'+Math.round(d)+' DMG','#ff7a3a','ecard');E.st.burn--;any=1}
@@ -1847,7 +1873,7 @@ if(E.st.fi>0)E.st.fi--;for(let i=0;i<FZ.length;i++)if(FZ[i]>0)FZ[i]--;
 if(any){draw();await wait(380)}
 const pd=P.hp<=0;if(pd)die();if(dead){}else if(E.hp<=0&&!E.dead){if(!sty)win()}else if(!pd){roundArm();if(st.ks.bulwark&&!E.dead){addArm(st.hp*.08);fl('🧊 Bulwark','#bff3ff','pcard')}}draw()}
 /* ===== the one resolution loop: mega-combos, matches, spawns, chain detonations, glow, gravity, cascades ===== */
-async function resolve(who,sw){/* v6.0.5 · audit W1: E0 pins the fight this chain belongs to; once Continue swaps in the next enemy the stale chain stops (settle() then deals the new board) */const E0=E;let combo=0,big=false,peak=1,first=1,again=[];
+async function resolveBase(who,sw){/* v6.0.5 · audit W1: E0 pins the fight this chain belongs to; once Continue swaps in the next enemy the stale chain stops (settle() then deals the new board) */const E0=E;let combo=0,big=false,peak=1,first=1,again=[];
 for(let guard=0;guard<80;guard++){if(who&&dead)break;if(E!==E0)break;const pl=!who,st=stat(),m=new Set,keep=new Set,spawns=[],fxq=[],pr=[];let seeded=0,flat=0,wipe=0;
 SP.forEach((s,i)=>{if(s==5&&B[i]>=0)pr.push(i)});
 if(first&&sw&&isSpec(sw[0])&&isSpec(sw[1])){const r=comboSeed(sw[0],sw[1],fxq);r.m.forEach(i=>m.add(i));seeded=r.n;flat=r.flat;wipe=r.wipe;again=r.again;fl(r.name,pl?'#ffffff':'#ff8a8a','bw',1,'spc');
@@ -1895,7 +1921,7 @@ const AW=[2,2,2,2,2,2,4];
 function aiMove(){const L=[];tryMoves((a,b)=>{const m=find();if(m.size){let s=0;m.forEach(i=>s+=AW[B[i]]);L.push([s,a,b])}});
 for(let a=0;a<N*N;a++){if(B[a]!=8||FZ[a])continue;for(const b of nb4(a)){if(locked(b)||!(isM(B[b])||B[b]==8))continue;let s=B[b]==8?60:0;if(B[b]!=8)B.forEach(v=>{if(v==B[b])s+=AW[v]});L.push([s+3,a,b])}}
 if(!L.length)return null;L.sort((x,y)=>y[0]-x[0]);const p=Math.random()<.7?L[0]:L[Math.floor(Math.random()*L.length)];return[p[1],p[2]]}
-async function foe(){try{if(sty||GT||E.dead||E.hp<=0)return;dead=false;const t=$('turnb'),stop=()=>dead||sty||E.dead;
+async function foeBase(){try{if(sty||GT||E.dead||E.hp<=0)return;dead=false;const t=$('turnb'),stop=()=>dead||sty||E.dead;
 if(E.st.stun>0){E.st.stun=0;t.hidden=false;t.textContent='💫 '+E.n+' is stunned! Its next intent is delayed.';fl('STUNNED!','#ffe14a','ecard');sfx('impact',0);await wait(700);t.hidden=true;await roundEnd();return}
 if(E.st.frz>0){E.st.frz=0;E.st.fi=2;t.hidden=false;t.textContent='❄️ '+E.n+' is frozen solid!';fl('FROZEN!','#7dd3fc','ecard');await wait(650);t.hidden=true;await roundEnd();return}
 E.tc++;/* v6.0.6 · audit L3: counted after Stun AND Freeze, so both pause the 3-turn tactic clock */
@@ -2288,10 +2314,10 @@ const b=$('pmb');b.innerHTML='';const mkB=(t,f,c,dis,tip)=>{const e=document.cre
 mkB('▶ Resume',closePM,'on');mkB('↺ Restart',restartBattle,'',!!GT,GT?'Gathering trips cannot be restarted':'');mkB('⚑ Retreat',retreat);mkB('☰ Main menu',()=>{$('pm').hidden=true;showMenu()},'pmx');
 $('pm').hidden=false;const w=$('pmw'),r=$('board').getBoundingClientRect(),h=w.offsetHeight||300;w.style.left=(r.left+r.width/2)+'px';w.style.top=Math.max(h/2+10,Math.min(innerHeight-h/2-10,r.top+r.height/2))+'px'}
 function closePM(){$('pm').hidden=true;PAUSED=0;document.body.classList.remove('paused');PQ.splice(0).forEach(f=>f());draw()}
-function restartBattle(){if(GT||!E)return;abortCombat();$('pm').hidden=true;const p0=E.p0;
+function restartBattleBase(){if(GT||!E)return;abortCombat();$('pm').hidden=true;const p0=E.p0;
 Object.assign(E,{hp:E.mx,arm:0,m:[0,0,0,0,0,0],st:{burn:0,poison:0,frz:0,fi:0,stun:0,curse:0,sund:0},tc:0,pt:0,enr:0,dead:false,p0:null});
 if(p0){P.hp=p0.hp;P.arm=p0.arm;P.st=Object.assign({},p0.st)}P.m=[0,0,0,0,0,0];P.cc=1;P.thorn=0;P.rez=0;dead=false;newBoard();save();msg('The battle begins anew against '+E.n+'.');fl('↺ RESTART','#e9c88c','bw',1);draw()}
-function retreat(){abortCombat();$('pm').hidden=true;dead=false;
+function retreatBase(){abortCombat();$('pm').hidden=true;dead=false;
 if(GT){stopGather();msg('You pack up your haul and head back to the road.')}else msg('You retreat from '+E.n+'. No rewards were earned.');
 P.m=[0,0,0,0,0,0];P.cc=1;P.st={burn:0,poison:0};FZ.fill(0);newEnemy();save();showTab('map');draw()}
 $('bmenu').onclick=e=>{e.stopPropagation();openPM()};
@@ -3788,15 +3814,15 @@ function vaultPreview(){const v=V(),z=HZ[v.haz]||HZ.lava,sp=v.sp;gl('<div class=
 function spoilsShow(){if(busy||sty||!vOn())return;vaultPreview()}
 
 /* ---------- hooks into the existing engine ---------- */
-const _win=win;win=function(){if(vOn()&&!GT)return vaultWin();const w=cur(),loc0=S.loc,front=!!(w&&!GT&&E&&!E.dead&&E.boss&&S.at==S.loc&&!S.done);_win();
+layer('win','v40-js',_win=>function(){if(vOn()&&!GT)return vaultWin();const w=cur(),loc0=S.loc,front=!!(w&&!GT&&E&&!E.dead&&E.boss&&S.at==S.loc&&!S.done);_win();
  if(!front||!E.dead||(S.loc==loc0&&!S.done))return;if(!(w.j%5==4||w.B)||R()>=(w.B?1:.22))return;
  const txt=grantPet(rollPet(w.ci/(NC-1))),g=$('glc'),L=g&&g.querySelectorAll('.rw');save();fl('🥚 Companion egg!','#f5cb52','bw',1);
- if(L&&L.length)L[L.length-1].insertAdjacentHTML('afterend','<div class="rw" style="border-color:#f5cb52"><span>🥚 Milestone chest</span><b>'+esc(txt)+'</b></div>')};
-const _die=die;die=function(){if(!vOn()||GT)return _die();if(dead)return;
+ if(L&&L.length)L[L.length-1].insertAdjacentHTML('afterend','<div class="rw" style="border-color:#f5cb52"><span>🥚 Milestone chest</span><b>'+esc(txt)+'</b></div>')});
+layer('die','v40-js',_die=>function(){if(!vOn()||GT)return _die();if(dead)return;
  if(E&&!P.rez&&stat().ks.phoenix){P.rez=1;P.hp=stat().hp*.3;P.st={burn:0,poison:0};fl('🪶 PHOENIX RITE!','#ffb347','bw',1);msg('Phoenix Rite: you rise from the ashes at 30% HP!');draw();return}
- dead=true;vaultLose('die')};
-const _rt=retreat;retreat=function(){if(!vOn()||GT)return _rt();$('pm').hidden=true;
- gl('<div class="rh">⚑ Abandon the Vault?</div><div class="sty">Leaving before a sealed door forfeits the Treasury Spoils Pouch. You keep only a 15% cushion of its gold (🪙 '+Math.floor(V().sp.g*.15)+').</div>',[['⚑ Abandon run',()=>{abortCombat();dead=false;vaultLose('quit')},'on'],['◀ Back to battle',null]])};
+ dead=true;vaultLose('die')});
+layer('retreat','v40-js',_rt=>function(){if(!vOn()||GT)return _rt();$('pm').hidden=true;
+ gl('<div class="rh">⚑ Abandon the Vault?</div><div class="sty">Leaving before a sealed door forfeits the Treasury Spoils Pouch. You keep only a 15% cushion of its gold (🪙 '+Math.floor(V().sp.g*.15)+').</div>',[['⚑ Abandon run',()=>{abortCombat();dead=false;vaultLose('quit')},'on'],['◀ Back to battle',null]])});
 const _pv=preview;preview=function(){if(vOn()&&!GT){if(!busy)vaultPreview();return}return _pv()};
 const _pg=pvGo;pvGo=function(){const p=PV;if(p&&p.act=='gather')p.cm=1;else if(p&&!p.cm){S.diff=p.d;vaultStart();return}return _pg()};
 const _pd=pvDraw;pvDraw=function(){_pd();const b=document.querySelector('#glc [data-a="pv:cm:0"]');if(b)b.innerHTML='🏛️ Vault';if(PV&&!PV.cm&&PV.act!='gather'){const h=$('glc').querySelector('select#pvd');if(h)h.insertAdjacentHTML('beforebegin','<div class="fslot" style="margin:6px 0"><b>🏛️ The Infinite Vault of the Scribes</b><div class="m">Endless waves, +15% enemy HP and damage per wave with no ceiling. Spoils stay in a pouch until you extract at a sealed door every 5th wave; defeat keeps only 15% of the pouch gold.'+(V().on?' A run is waiting at wave '+V().wave+'.':'')+'</div></div>')}};
@@ -3979,8 +4005,7 @@ const inVault=()=>!!(window.GG40&&GG40.vOn&&GG40.vOn());
 const campaignActive=()=>!GT&&!!S.cm&&!inVault()&&!!E&&!!cur();
 onEnemy(()=>{if(!campaignActive())return;const w=cur(),m=campaignStatModifier(w.ci,w.j);
  E.cmod=m;E.mx=Math.max(1,Math.floor(E.mx*m));E.hp=E.mx;E.at*=m;E.sh0=Math.floor(E.mx*shieldFrac(m));E.arm=E.sh0;E.sig+='|x'+m.toFixed(3)});
-const _rb=restartBattle;
-restartBattle=function(){_rb();if(E&&E.sh0&&campaignActive()){E.arm=E.sh0;draw()}};
+layer('restartBattle','v41-js',_rb=>function(){_rb();if(E&&E.sh0&&campaignActive()){E.arm=E.sh0;draw()}});
 
 /* ---------- preview + HUD readouts ---------- */
 const _pd=pvDraw;
@@ -3996,14 +4021,13 @@ const rewardMul=m=>Math.sqrt(Math.max(1,m||1));
 /* same yield formula win() uses, so the bonus is an exact (k-1) top-up of the base payout */
 function baseYield(){const d=D(),st=stat(),s=E.s,boss=E.boss,em=E.elite&&!boss?1.5:1;
  return{x:Math.floor(15*s*(1+s*.15)*d.r*em),g:Math.floor((6+4*s)*st.gold*(boss?3:1)*d.r*em),xm:st.xp}}
-const _win=win;
-win=function(){const ok=campaignActive()&&!E.dead&&E.cmod>1,k=ok?rewardMul(E.cmod):1,y=ok?baseYield():null;_win();
+layer('win','v41-js',_win=>function(){const ok=campaignActive()&&!E.dead&&E.cmod>1,k=ok?rewardMul(E.cmod):1,y=ok?baseYield():null;_win();
  if(!ok||!E.dead)return;const ex=Math.round(y.x*(k-1)),eg=Math.round(y.g*(k-1));
  if(ex)addXp(ex);if(eg){S.gold+=eg;qev('gold',eg)}save();
  const kt=' (×'+k.toFixed(2)+')',glc=$('glc');
  if(!$('gl').hidden&&glc){for(const row of glc.querySelectorAll('.rw')){const t=row.firstChild&&row.firstChild.textContent||'',b=row.querySelector('b');if(!b)continue;
    if(/XP$/.test(t)&&/^✨/.test(t))b.textContent='+'+Math.round((y.x+ex)*y.xm)+kt;else if(t=='🪙 Gold')b.textContent='+'+(y.g+eg)+kt}}
- else fl('📈 Scaling bonus +'+eg+' 🪙 · +'+Math.round(ex*y.xm)+' XP','#ffd27a','ecard');draw()};
+ else fl('📈 Scaling bonus +'+eg+' 🪙 · +'+Math.round(ex*y.xm)+' XP','#ffd27a','ecard');draw()});
 /* defeat consolation is 12.5% of a win's yield, so it scales by the same factor */
 const _dp=defeatPity;
 defeatPity=function(){const r=_dp();if(campaignActive()&&E.cmod>1){const k=rewardMul(E.cmod);r.x=Math.max(1,Math.round(r.x*k));r.g=Math.max(1,Math.round(r.g*k))}return r};
@@ -4316,8 +4340,8 @@ window.GG48={renderDynamicMonsterPortrait,resolveProfile,resolveDamageType,resol
 /* ---------- 1. milestone triggers: each one forces an immediate background write ---------- */
 /* each wrapper calls the original, then forces a write tagged with the milestone */
 const W={win,die,travelTo,arrive,walloc,wrefund,rstart,rtick,newGame,endGather,act,retryEncounter};
-win=function(){const r=W.win.apply(this,arguments);if(E&&E.dead)GGDB.milestone(vaultOn()?'vault-victory':'battle-victory');return r};
-die=function(){const r=W.die.apply(this,arguments);if(dead)GGDB.milestone('defeat-pity');return r};
+layer('win','ggdb-engine',W_win=>function(){const r=W_win.apply(this,arguments);if(E&&E.dead)GGDB.milestone(vaultOn()?'vault-victory':'battle-victory');return r});
+layer('die','ggdb-engine',W_die=>function(){const r=W_die.apply(this,arguments);if(dead)GGDB.milestone('defeat-pity');return r});
 travelTo=function(i){const r=W.travelTo.apply(this,arguments);GGDB.milestone('travel:'+i);return r};
 arrive=function(){const r=W.arrive.apply(this,arguments);GGDB.milestone('travel:'+S.at);return r};
 walloc=function(i){const n=C().n.length,r=W.walloc.apply(this,arguments);if(C().n.length!=n)GGDB.milestone('skill-node:'+i);return r};
@@ -4535,7 +4559,7 @@ function gateDenied(el,key){const g=PM.gates[key];if(el){el.classList.remove('ga
  if(typeof sfx=='function')sfx('impact',0)}
 document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.gate-locked');if(!el)return;e.preventDefault();e.stopImmediatePropagation();gateDenied(el,el.dataset.gate)},true);
 /* programmatic entry points */
-const _cp=castP;castP=function(i){const k=i==2?'slot3':i==3?'slot4':null;if(k&&!gateOpen(k)){gateDenied(skillBtn(i),k);return}return _cp.apply(this,arguments)};
+layer('castP','v49-js',_cp=>function(i){const k=i==2?'slot3':i==3?'slot4':null;if(k&&!gateOpen(k)){gateDenied(skillBtn(i),k);return}return _cp.apply(this,arguments)});
 const _oc=openCon;openCon=function(k){const tab=k||conTab;if(['tree','lab','pets'].includes(tab)&&!gateOpen(tab)){gateDenied(conTabBtn(tab),tab);if(conOpen)return;return _oc.call(this,'hero')}
  const r=_oc.apply(this,arguments);validateProgressionLocks();return r};
 let NG=0;const _cc=closeCon;closeCon=function(){if(NG&&S.pets)S.pets.gift=1;const r=_cc.apply(this,arguments);validateProgressionLocks();return r};
@@ -4546,11 +4570,11 @@ const _tt=travelTo;travelTo=function(){const r=_tt.apply(this,arguments);validat
 const _ar=arrive;arrive=function(){const r=_ar.apply(this,arguments);validateProgressionLocks();return r};
 /* new heroes: fresh progression record, and the stray-camp companion is replaced by a guaranteed egg at the first milestone chest */
 const _ng=newGame;newGame=function(){NG=1;try{return _ng.apply(this,arguments)}finally{NG=0;S.tut=freshTut();gateSig='';validateProgressionLocks();save()}};
-const _win=win;win=function(){const w=cur(),front=!!(w&&!GT&&E&&!E.dead&&E.boss&&S.at==S.loc&&!S.done&&S.cm&&!vaultOn())&&(w.j%5==4||w.B),none=!petsOwned();
+layer('win','v49-js',_win=>function(){const w=cur(),front=!!(w&&!GT&&E&&!E.dead&&E.boss&&S.at==S.loc&&!S.done&&S.cm&&!vaultOn())&&(w.j%5==4||w.B),none=!petsOwned();
  const r=_win.apply(this,arguments);
  if(front&&none&&E.dead&&!petsOwned()&&window.GG40){const txt=GG40.grantPet(GG40.rollPet(w.ci/(NC_-1)));fl('🥚 Companion egg!','#f5cb52','bw',1);save();
   const g=$('glc'),L=g&&g.querySelectorAll('.rw');if(L&&L.length)L[L.length-1].insertAdjacentHTML('afterend','<div class="rw" style="border-color:#f5cb52"><span>🥚 Milestone chest</span><b>'+esc(txt)+'</b></div>');validateProgressionLocks()}
- return r};
+ return r});
 
 /* =================================================================
    4. CODEX TUTORIAL PANE
@@ -4889,10 +4913,10 @@ onStat(s=>{for(const y of synList())try{SYN[y.c][y.i][2](s)}catch(e){}});
 /* =====================================================================
    7. BATTLE + GATHERING DROPS, BESTIARY KILL LEDGER
    ===================================================================== */
-const _win=win;win=function(){const e=E,live=!!(e&&!e.dead&&!GT),w=cur(),inv0=new Set(S.inv.map(i=>i.id)),vault=vaultOn();
+layer('win','v51-js',_win=>function(){const e=E,live=!!(e&&!e.dead&&!GT),w=cur(),inv0=new Set(S.inv.map(i=>i.id)),vault=vaultOn();
  const r=_win.apply(this,arguments);
  if(live&&e.dead&&!vault)try{onKill(e,w,inv0)}catch(err){console.error('[Gemgrind v5.1] kill ledger',err)}
- return r};
+ return r});
 function onKill(e,w,inv0){const rows=[],b=S.bst,a=Math.max(0,Math.min(4,e.act|0)),now=Math.floor(Date.now()/1000);let mask=0,best=0;
  for(const it of S.inv)if(!inv0.has(it.id)&&!it.set){mask|=DROPB.gear;best=Math.max(best,(it.r|0)+1)}
  if(e.boss)mask|=DROPB.ess;
@@ -5303,30 +5327,30 @@ const _fr=fresh;fresh=function(){const sd=CH&&CH.seedNext,MR=Math.random;if(sd){
 /* v6.0.6 · audit L4: Barren Emeralds shapes new gems at the source; syncBoard() no longer rewrites the board */const _rg=refillGem;refillGem=function(){return!GT&&on('noheal')?nonEm():_rg.apply(this,arguments)};
 /* --- rules that touch the player --- */
 onStat(s=>{if(!GT&&on('glass'))s.hp*=.7});
-const _up=usePot;usePot=function(k){if(!GT&&on('nopot')){$('potm').hidden=true;msg('🚫 No Potions: this trial forbids drinking potions.');fl('🚫 NO POTIONS','#f87171','pcard');return}return _up.apply(this,arguments)};
-const _cp=castP;castP=function(i){if(!GT&&on('skulls')){msg('💀 Skulls Only: your skills are sealed. Match skulls to strike.');fl('💀 SKILLS SEALED','#f87171','pcard');return}return _cp.apply(this,arguments)};
+layer('usePot','v52-js',_up=>function(k){if(!GT&&on('nopot')){$('potm').hidden=true;msg('🚫 No Potions: this trial forbids drinking potions.');fl('🚫 NO POTIONS','#f87171','pcard');return}return _up.apply(this,arguments)});
+layer('castP','v52-js',_cp=>function(i){if(!GT&&on('skulls')){msg('💀 Skulls Only: your skills are sealed. Match skulls to strike.');fl('💀 SKILLS SEALED','#f87171','pcard');return}return _cp.apply(this,arguments)});
 /* --- affix behaviour --- */
 async function hasteMove(){if(sty||dead||!E||E.dead)return;const t=$('turnb');t.hidden=false;t.textContent='💨 '+E.n+' moves with unnatural haste!';await wait(420);const m=aiMove();
  if(m){hl=m;draw();await wait(450);hl=[];swapTiles(m[0],m[1]);await wait(260);await resolve(1,m);await ensure()}t.hidden=true}
-const _foe=foe;foe=async function(){
+layer('foe','v52-js',_foe=>async function(){
  if(CH&&on('turns')&&E&&!E.dead&&E.hp>0&&!sty&&!dead&&(E.pt|0)>=LIM){chLose('time');return}
  if(!GT&&E&&!E.dead&&(E.afx||[]).includes('haste')&&!(E.st.stun>0)&&!(E.st.frz>0)&&!sty&&!dead){E.hz=(E.hz|0)+1;if(E.hz%2==0)await hasteMove()}
- return _foe.apply(this,arguments)};
-const _tt=turnTick;turnTick=function(){const r=_tt.apply(this,arguments);if(CH&&on('turns')&&E&&!E.dead&&(E.pt|0)>LIM&&!sty&&!dead)chLose('time');return r};
-const _rnd=roundEnd;roundEnd=async function(){const r=await _rnd.apply(this,arguments);
- if(!GT&&E&&!E.dead&&E.hp>0&&!dead&&(E.afx||[]).includes('regen')&&E.hp<E.mx){const v=E.mx*.04;E.hp=Math.min(E.mx,E.hp+v);fl('♻️ +'+Math.round(v)+' HP','#86efac','ecard');draw()}return r};
-const _pdm=pdmg;pdmg=async function(){const ax=!GT&&E&&E.afx&&E.afx.length?E.afx:null,h0=P.hp,r=await _pdm.apply(this,arguments);
- if(ax&&E&&!E.dead){const lost=h0-Math.max(0,P.hp);if(lost>0){if(ax.includes('vamp')){const v=lost*.4;E.hp=Math.min(E.mx,E.hp+v);fl('🧛 +'+Math.round(v)+' HP','#ff6a8a','ecard')}if(ax.includes('venom')&&!dead&&R()<.35)inflict('p','poison',2)}}return r};
-const _hit=hit;hit=function(){const ax=!GT&&E&&!E.dead&&E.afx&&E.afx.includes('thorns'),h0=ax?E.hp:0,r=_hit.apply(this,arguments);
- if(ax&&!dead){const dl=h0-Math.max(0,E.hp),v=Math.min(dl*.08*BX('affix_thorns')/*BX*/,Math.max(0,P.hp-1));if(v>=1){P.hp-=v;fl('🌵 -'+Math.round(v)+' Thorns','#c9a24e','pcard')}}return r};
-const _rb=restartBattle;restartBattle=function(){if(CH)CH.seedNext=CH.sp.bs+CH.f*7919;const r=_rb.apply(this,arguments);if(E&&!GT){E.hz=0;if(E.sh0&&!campaignActive())E.arm=E.sh0}return r};
+ return _foe.apply(this,arguments)});
+layer('turnTick','v52-js',_tt=>function(){const r=_tt.apply(this,arguments);if(CH&&on('turns')&&E&&!E.dead&&(E.pt|0)>LIM&&!sty&&!dead)chLose('time');return r});
+layer('roundEnd','v52-js',_rnd=>async function(){const r=await _rnd.apply(this,arguments);
+ if(!GT&&E&&!E.dead&&E.hp>0&&!dead&&(E.afx||[]).includes('regen')&&E.hp<E.mx){const v=E.mx*.04;E.hp=Math.min(E.mx,E.hp+v);fl('♻️ +'+Math.round(v)+' HP','#86efac','ecard');draw()}return r});
+layer('pdmg','v52-js',_pdm=>async function(){const ax=!GT&&E&&E.afx&&E.afx.length?E.afx:null,h0=P.hp,r=await _pdm.apply(this,arguments);
+ if(ax&&E&&!E.dead){const lost=h0-Math.max(0,P.hp);if(lost>0){if(ax.includes('vamp')){const v=lost*.4;E.hp=Math.min(E.mx,E.hp+v);fl('🧛 +'+Math.round(v)+' HP','#ff6a8a','ecard')}if(ax.includes('venom')&&!dead&&R()<.35)inflict('p','poison',2)}}return r});
+layer('hit','v52-js',_hit=>function(){const ax=!GT&&E&&!E.dead&&E.afx&&E.afx.includes('thorns'),h0=ax?E.hp:0,r=_hit.apply(this,arguments);
+ if(ax&&!dead){const dl=h0-Math.max(0,E.hp),v=Math.min(dl*.08*BX('affix_thorns')/*BX*/,Math.max(0,P.hp-1));if(v>=1){P.hp-=v;fl('🌵 -'+Math.round(v)+' Thorns','#c9a24e','pcard')}}return r});
+layer('restartBattle','v52-js',_rb=>function(){if(CH)CH.seedNext=CH.sp.bs+CH.f*7919;const r=_rb.apply(this,arguments);if(E&&!GT){E.hz=0;if(E.sh0&&!campaignActive())E.arm=E.sh0}return r});
 /* --- NG+ drop quality: victory-chest rarity can climb one step --- */
 const _rr=rollR;rollR=function(boss,rng){let r=_rr.apply(this,arguments);const t=ngT();if(!rng&&t>0&&!CH&&campaignActive()&&r<4&&R()<ngDrop(t))r++;return r};
 
 /* =====================================================================
    7. WIN / LOSS ROUTING
    ===================================================================== */
-const _win=win;win=function(){
+layer('win','v52-js',_win=>function(){
  if(CH&&!GT)return chWin();
  /* Vault mutators: the bonus is added to whatever this wave just put in the pouch */
  const vb=!GT&&vaultOn()&&E&&!E.dead?liveBonus():0;
@@ -5337,11 +5361,11 @@ const _win=win;win=function(){
    const vx=document.querySelector('#storyTheaterModal .vxs');if(vx){const b=vx.querySelectorAll('b');if(b[0])b[0].textContent=sp.g;if(b[1])b[1].textContent=(()=>{let n=0;for(const m in sp.m)n+=sp.m[m].reduce((a,c)=>a+c,0);return n})();if(b[2])b[2].textContent=sp.e+' · '+sp.gs}
    save()}catch(e){console.error('[Gemgrind v5.1] mutator bonus',e)}return r}
  /* campaign: watch for the final Sanctum falling (S.done 0 -> 1) to unlock the next NG+ tier */
- const d0=S.done,r=_win.apply(this,arguments);if(!d0&&S.done)try{ngCleared()}catch(e){console.error(e)}return r};
-const _die=die;die=function(){if(!CH||GT)return _die.apply(this,arguments);if(dead)return;
+ const d0=S.done,r=_win.apply(this,arguments);if(!d0&&S.done)try{ngCleared()}catch(e){console.error(e)}return r});
+layer('die','v52-js',_die=>function(){if(!CH||GT)return _die.apply(this,arguments);if(dead)return;
  if(E&&!P.rez&&stat().ks.phoenix){P.rez=1;P.hp=stat().hp*.3;P.st={burn:0,poison:0};fl('🪶 PHOENIX RITE!','#ffb347','bw',1);msg('Phoenix Rite: you rise from the ashes at 30% HP!');draw();return}
- chLose('die')};
-const _ret=retreat;retreat=function(){if(!CH||GT)return _ret.apply(this,arguments);abortCombat();$('pm').hidden=true;msg('You step away from the trial. You may try again until it resets.');chExit()};
+ chLose('die')});
+layer('retreat','v52-js',_ret=>function(){if(!CH||GT)return _ret.apply(this,arguments);abortCombat();$('pm').hidden=true;msg('You step away from the trial. You may try again until it resets.');chExit()});
 const _pv=preview;preview=function(){if(CH&&!GT){if(!busy)chInfo();return}return _pv.apply(this,arguments)};
 /* leaving the battle screen for the map (or the camp) ends a challenge run cleanly */
 const _sht=showTab;showTab=function(k){if(CH&&k!='battle'&&!CONS.has(k))chQuit();return _sht.apply(this,arguments)};
@@ -5724,7 +5748,7 @@ function killFx(r,snap,loot,boss,elite){vib(boss?[90,50,140]:[60,40,100]);try{sh
  const ord=loot.map(it=>Math.max(0,Math.min(4,it&&it.r|0))).sort((a,b)=>a-b);ord.forEach((rr,j)=>setTimeout(()=>{try{rareSnd(rr)}catch(e){}},420+j*240))}
 
 /* ================= WRAPPERS (extend, never replace) ================= */
-const _resolve=resolve;resolve=async function(who){JX.inRes++;JX.who=who?1:0;JX.chain=0;JX.jack=0;try{return await _resolve.apply(this,arguments)}finally{JX.inRes=Math.max(0,JX.inRes-1);if(!JX.inRes)JX.chain=0}};
+layer('resolve','v52a-js',_resolve=>async function(who){JX.inRes++;JX.who=who?1:0;JX.chain=0;JX.jack=0;try{return await _resolve.apply(this,arguments)}finally{JX.inRes=Math.max(0,JX.inRes-1);if(!JX.inRes)JX.chain=0}});
 const _sfx=sfx;sfx=function(k,a){const r=_sfx.apply(this,arguments);if(k=='match'){const ch=JX.inRes?++JX.chain:Math.max(1,a|0);try{chainTone(ch)}catch(e){}if(JX.inRes&&ch>=4&&!JX.jack){JX.jack=1;try{jackpot(ch)}catch(e){}}}return r};
 const _burst=burst;burst=function(i,v){const r=_burst.apply(this,arguments);if(!RM())try{gemFx(i,v)}catch(e){}return r};
 const _spec=specOf;specOf=function(){const r=_spec.apply(this,arguments);if(r&&JX.inRes&&!JX.who){const lv=r.s==4||r.s==3?2:1;if(lv>JX.vq)JX.vq=lv;if(!JX.vt)JX.vt=setTimeout(()=>{vib(JX.vq==2?[55,35,70]:22);JX.vq=0;JX.vt=0},0)}return r};
@@ -5736,18 +5760,18 @@ const _fl=fl;fl=function(txt,col,id,big,cls){const host=$(id||'pcard'),before=ho
   if(cls=='crit'){e.classList.add('jx');if(ec)e.style.textShadow='0 1px 0 #000,0 0 10px '+ec[0]+',0 0 18px #ff6a00';if(JX.inHit)JX.lastFl=e}
   else if(/^-\d+ DMG/.test(t)){if((id||'pcard')=='ecard'){if(ec){e.textContent=ec[1]+' '+t;e.style.color=ec[0];e.classList.add('jx','jel')}else e.classList.add('jx','jdn');if(JX.inHit)JX.lastFl=e}else e.classList.add('jx','jtk')}
   else if(/\+\d+\s*HP\b/.test(t)){e.style.color='#7dff9a';e.classList.add('jx','jhl')}}catch(e){}return r};
-const _hit=hit;hit=function(){if(GT||!E||E.dead)return _hit.apply(this,arguments);const h0=E.hp,mx=Math.max(1,E.mx||E.hp),pe=JX.el,pc=JX.crit;let el=null;
+layer('hit','v52a-js',_hit=>function(){if(GT||!E||E.dead)return _hit.apply(this,arguments);const h0=E.hp,mx=Math.max(1,E.mx||E.hp),pe=JX.el,pc=JX.crit;let el=null;
  try{if(curK){const m=skMeta(curK,S.cls);if(m&&m.type=='magical')el=m.el}}catch(e){}JX.inHit++;JX.el=el;JX.crit=0;JX.lastFl=null;let r;
  try{r=_hit.apply(this,arguments)}finally{JX.inHit--;}
  const cr=JX.crit,dmg=Math.max(0,h0-Math.max(0,E?E.hp:0)),f=dmg/mx,e=JX.lastFl;JX.el=JX.inHit?pe:null;JX.crit=JX.inHit?pc:0;JX.lastFl=null;
- if(dmg>.5){if(e&&!cr)e.style.fontSize=Math.round(19*(1+Math.min(.55,f*1.8)))+'px';else if(e)e.style.fontSize=Math.round(31*(1+Math.min(.4,f*1.2)))+'px';shakeBy(ampFor(f,cr));if(cr||f>=.12)hitStop(60)}return r};
+ if(dmg>.5){if(e&&!cr)e.style.fontSize=Math.round(19*(1+Math.min(.55,f*1.8)))+'px';else if(e)e.style.fontSize=Math.round(31*(1+Math.min(.4,f*1.2)))+'px';shakeBy(ampFor(f,cr));if(cr||f>=.12)hitStop(60)}return r});
 const _hurt=hurt;hurt=async function(d){try{if(d>0){const f=d/Math.max(1,stat().hp);shakeBy(ampFor(f,0));if(f>=.15)hitStop(60);if(f>=.2)vib(25)}}catch(e){}return _hurt.apply(this,arguments)};
-const _drop=drop;drop=function(){const r=_drop.apply(this,arguments);if(JX.inWin&&Array.isArray(r))JX.loot=JX.loot.concat(r);return r};
-const _win=win;win=function(){if(GT||!E||E.dead||JX.inWin)return _win.apply(this,arguments);
+layer('drop','v52a-js',_drop=>function(){const r=_drop.apply(this,arguments);if(JX.inWin&&Array.isArray(r))JX.loot=JX.loot.concat(r);return r});
+layer('win','v52a-js',_win=>function(){if(GT||!E||E.dead||JX.inWin)return _win.apply(this,arguments);
  const boss=!!E.boss,elite=!!E.elite,ef=$('ef'),rc=ef&&ef.getBoundingClientRect(),ok=rc&&rc.width>4&&curTab=='battle',snap=ok&&!RM()?ef.cloneNode(true):null,gl=$('gl');
  if(gl&&!RM()){gl.classList.add('jdelay');clearTimeout(gl._jd);gl._jd=setTimeout(()=>gl.classList.remove('jdelay'),1000)}
  JX.inWin=1;JX.loot=[];let r;try{r=_win.apply(this,arguments)}finally{JX.inWin=0}
- try{killFx(ok?{left:rc.left,top:rc.top,width:rc.width,height:rc.height,bottom:rc.bottom}:null,snap,JX.loot.slice(0,4),boss,elite)}catch(e){console.warn('[Gemgrind v5.2a] kill fx',e)}return r};
+ try{killFx(ok?{left:rc.left,top:rc.top,width:rc.width,height:rc.height,bottom:rc.bottom}:null,snap,JX.loot.slice(0,4),boss,elite)}catch(e){console.warn('[Gemgrind v5.2a] kill fx',e)}return r});
 
 /* ---------- Settings: Game Feel section (screen shake, vibration, sound + master volume) ---------- */
 const _rs=renderSet;renderSet=function(){const r=_rs.apply(this,arguments);try{jxMaster();const el=$('setc');if(!el||el.querySelector('.jxset'))return r;
@@ -5893,28 +5917,28 @@ const SNM=['Cleared','Deathless','Swift'];
    ===================================================================== */
 let GB=0,inWin=0,DR=[];
 onEnemy(()=>{try{if(E)E._fam=famOf(E.n)}catch(e){}});
-const _hit=hit;hit=function(d){try{if(E&&!E.dead&&!GT&&isFinite(d)&&d>0){if(E._fam===undefined)E._fam=famOf(E.n);const t=E._fam?famTier(E._fam):0;if(t)arguments[0]=d*(1+.01*t)}}catch(e){}return _hit.apply(this,arguments)};
+layer('hit','v52b-js',_hit=>function(d){try{if(E&&!E.dead&&!GT&&isFinite(d)&&d>0){if(E._fam===undefined)E._fam=famOf(E.n);const t=E._fam?famTier(E._fam):0;if(t)arguments[0]=d*(1+.01*t)}}catch(e){}return _hit.apply(this,arguments)});
 onStat(s=>{if(GB&&s&&isFinite(s.gold))s.gold*=1+.02*GB});
-const _die=die;die=function(){const was=dead,r=_die.apply(this,arguments);try{if(!was&&dead&&S.cm&&!vaultOn()&&!chOn())ms().rn[Math.min(S.at,TOTAL-1)]=0}catch(e){}return r};
+layer('die','v52b-js',_die=>function(){const was=dead,r=_die.apply(this,arguments);try{if(!was&&dead&&S.cm&&!vaultOn()&&!chOn())ms().rn[Math.min(S.at,TOTAL-1)]=0}catch(e){}return r});
 
 /* hidden bad-luck protection: every victory without a rare+ drop adds 2.5% (max 45%) to upgrade the next victory chest to Rare or better */
-const _drop=drop;drop=function(){const r=_drop.apply(this,arguments);
+layer('drop','v52b-js',_drop=>function(){const r=_drop.apply(this,arguments);
  try{if(inWin&&Array.isArray(r)&&E&&!vaultOn()){DR=DR.concat(r);if(!r.some(t=>t&&(t.r|0)>=2)){const p=Math.min(.45,.025*(ms().blp|0));
   if(p>0&&R()<p){const rr=Math.max(2,Math.min(4,typeof relicR=='function'?relicR(rollR(true)):rollR(true))),it=genItem(C().l,null,rr);
    if(S.inv.length>=CAP_I)S.gold+=sellP(it);else S.inv.push(it);try{qev('loot')}catch(e){}r.push(it);DR.push(it);
-   try{const J=window.GGJuice;if(J&&J.inWin&&Array.isArray(J.loot))J.loot.push(it)}catch(e){}}}}}catch(e){}return r};
+   try{const J=window.GGJuice;if(J&&J.inWin&&Array.isArray(J.loot))J.loot.push(it)}catch(e){}}}}}catch(e){}return r});
 
 /* =====================================================================
    4. VICTORY · every milestone is evaluated here, after the original win
    ===================================================================== */
-const _win=win;win=function(){if(GT||!E||E.dead||inWin)return _win.apply(this,arguments);
+layer('win','v52b-js',_win=>function(){if(GT||!E||E.dead||inWin)return _win.apply(this,arguments);
  const e=E,w=cur(),i=Math.min(S.at,TOTAL-1),vault=vaultOn(),camp=!!(S.cm&&w&&!vault&&!chOn()),c=C(),l0=c.l,x0=c.x,bk0=S.bst?S.bst.k|0:0,inv0=new Set((S.inv||[]).map(t=>t&&t.id));
  let fam=null;try{fam=e._fam!==undefined?e._fam:famOf(e.n)}catch(x){}
  inWin=1;DR=[];GB=fam&&!vault?famTier(fam):0;let r;
  try{r=_win.apply(this,arguments)}finally{inWin=0;GB=0}
  /* v5.4 audit 63: practice challenge wins grant nothing, so they must not advance the Spoils Tally or Hunter tiers either */let prac=false;try{prac=!!(chOn()&&window.GG52&&GG52.live()&&GG52.live().prac)}catch(x){}
  if(e.dead&&!prac)try{after(e,w,i,camp,vault,fam,c,l0,x0,bk0,inv0)}catch(err){console.warn('[Gemgrind v5.2b] milestones',err)}
- return r};
+ return r});
 function after(e,w,i,camp,vault,fam,c,l0,x0,bk0,inv0){const m=ms(),Q=[];
  /* XP per victory (smoothed) for the fight estimates */
  let dx=c.x-x0;if(c.l>l0){dx=need(l0)-x0+c.x;for(let l=l0+1;l<c.l;l++)dx+=need(l)}if(dx>0)m.xe=m.xe?m.xe*.7+dx*.3:dx;
@@ -6254,7 +6278,7 @@ function juice(t){const J=window.GGJuiceFx;if(!J)return;try{J.vib(t>=4?[20,40,25
 let RWHO=-1,SIM=0,LG=null;
 const _tm=tryMoves;tryMoves=function(){SIM++;try{return _tm.apply(this,arguments)}finally{SIM--}};
 const _gp=groups;groups=function(){const r=_gp.apply(this,arguments);if(!SIM)LG=r;return r};
-const _rs=resolve;resolve=async function(who){const p=RWHO;RWHO=who?1:0;LG=null;try{return await _rs.apply(this,arguments)}finally{RWHO=p;LG=null}};
+layer('resolve','v52f-js',_rs=>async function(who){const p=RWHO;RWHO=who?1:0;LG=null;try{return await _rs.apply(this,arguments)}finally{RWHO=p;LG=null}});
 const _gf=glowFlash;glowFlash=function(cells){const g=LG;LG=null;if(g&&RWHO===0&&!GT&&E&&!E.dead&&!dead)try{gemCheck(g,cells)}catch(e){console.error('[Gemgrind v5.2] gem resonance',e)}return _gf.apply(this,arguments)};
 function gemCheck(gs,cells){const inA=new Set(cells);
  /* a real match group: a gem colour whose cells (bar a spawned special) are being cleared this step */
@@ -6279,9 +6303,9 @@ function fire(id,ga,gb,inA){const X=GX[id],st=stat(),n=ga.cells.size+gb.cells.si
  if(mk){fl('🎭 '+MUTN[mk]+' resonance','#e9c88c','pcard');msg('🎭 Vault resonance · '+MUTN[mk]+' empowers '+X.n+': '+MUTX[mk].t+'.')}
  discover('g:'+id)}
 /* Regenerating Foes + Wildfire / Blight Bloom: cauterized foes skip their regeneration */
-const _re=roundEnd;roundEnd=async function(){const e=E;let x=null;
+layer('roundEnd','v52f-js',_re=>async function(){const e=E;let x=null;
  if(e&&e.cau>0&&Array.isArray(e.afx)&&e.afx.includes('regen')){x=e.afx;e.afx=x.filter(k=>k!='regen')}
- try{return await _re.apply(this,arguments)}finally{if(e){if(x)e.afx=x;if(e.cau>0)e.cau--}}};
+ try{return await _re.apply(this,arguments)}finally{if(e){if(x)e.afx=x;if(e.cau>0)e.cau--}}});
 
 /* =====================================================================
    5. RUNE WORDS + SECRET SYNERGIES · stat injection and discovery watch
@@ -6554,10 +6578,10 @@ function tag(ch,a){for(const i of ch){const t=tiles[i];if(!t)continue;const v=B[
  else if(a==2&&v==4)t.classList.add('w53p');
  else if(a>=4&&v==7)t.classList.add('w53b','w53p');
  else continue;t._w53=v}}
-if(typeof bossTactic=='function'){const _bt=bossTactic;bossTactic=async function(){
+if(typeof bossTactic=='function'){layer('bossTactic','v53-js',_bt=>async function(){
  let snap=null,a=-1;try{snap=B.slice();a=E?E.act:-1}catch(e){}
  hook=()=>{if(!snap)return;const ch=[];for(let i=0;i<B.length;i++)if(B[i]!==snap[i])ch.push(i);if(!ch.length)return;hook=null;try{tag(ch,a)}catch(e){}};
- try{return await _bt.apply(this,arguments)}finally{hook=null}}}
+ try{return await _bt.apply(this,arguments)}finally{hook=null}})}
 
 onSync(()=>{try{body();if(hook)hook();sync()}catch(e){}});
 onDraw(()=>{try{body();sync()}catch(e){}});
@@ -7045,8 +7069,7 @@ window.GG_RIDER=R=>{const o=[];if(R.s)o.push((STN[R.s]?STN[R.s][0]+' ':'')+RN[R.
 /* effect kinds: damage skills vs support skills */
 const SUPT=new Set(['arm','heal','mana','sk','sacr']);window.GG_SKILL_KIND=k=>k&&SUPT.has(k[2])?'support':'damage';
 window.GG_SUPPORT=window.GG_SUPPORT||{};
-const _cast=cast;
-cast=async function(k,who){
+layer('cast','v604-skills',_cast=>async function(k,who){
  if(who||!k){return _cast.apply(this,arguments)}
  const sup=SUPT.has(k[2]),hp0=P.hp,ar0=P.arm;
  const r=await _cast.apply(this,arguments);
@@ -7062,7 +7085,7 @@ cast=async function(k,who){
    if(R.k&&E&&!E.dead)skulls(R.k)}
   if(sup){const g=window.GG_SUPPORT[k[0]]||(window.GG_SUPPORT[k[0]]={n:0,v:0,c:S.cls});g.n++;g.v+=Math.max(0,P.hp-hp0)+Math.max(0,P.arm-ar0);g.c=S.cls}
  }catch(e){console.warn('[Gemgrind v6.0.4] skill rider',e)}
- return r};
+ return r});
 }catch(e){console.error('[Gemgrind v6.0.4] skill library',e)}})();
 </script>
 
@@ -7146,7 +7169,9 @@ function console1(){try{const r=run();for(const k in r.summary){const s=r.summar
  const L=t=>{if(window.logDebugIssue)logDebugIssue('INFO','📐 Balance sim: '+r.rows.length+' fights in '+r.ms+' ms · '+t+' · full result in GGBalance.last')};
  try{navigator.clipboard.writeText(csv(r.rows)).then(()=>L('CSV copied to the clipboard'),()=>L('clipboard blocked: GGBalance.csv(GGBalance.last.rows) gives the CSV'))}catch(_){L('no clipboard: GGBalance.csv(GGBalance.last.rows) gives the CSV')}}
  catch(e){if(window.logDebugIssue)logDebugIssue('ERROR','Balance sim failed: '+e.message)}}
-const hook=()=>{try{if(window.DebugBar&&!document.getElementById('balsim'))DebugBar.add('balsim','📐 Balance sim (audit W2): models every difficulty and continent, copies a CSV',console1).textContent='📐 [DEBUG] Balance sim'}catch(e){}};
+const hook=()=>{try{if(window.DebugBar&&!document.getElementById('balsim'))DebugBar.add('balsim','📐 Balance sim (audit W2): models every difficulty and continent, copies a CSV',console1).textContent='📐 [DEBUG] Balance sim'}catch(e){}
+ /* v6.1 · layer map: logs every combat function's layer chain (innermost first) */
+ try{if(window.DebugBar&&window.GGLayers&&!document.getElementById('laymap'))DebugBar.add('laymap','🧬 Layer map: which version layers wrap each combat function, in run order',()=>{const L=GGLayers();for(const k in L)if(window.logDebugIssue)logDebugIssue('INFO','🧬 '+k+': '+L[k].join(' → '))}).textContent='🧬 [DEBUG] Layer map'}catch(e){}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else setTimeout(hook,0);
 const api={run,summary,csv,levelCurve,defaults:DEF,last:null};return api})();
 </script>
