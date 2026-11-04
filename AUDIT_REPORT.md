@@ -101,7 +101,24 @@ The excluded systems can multiply damage several times over, so this is **not pr
 ```
 The HUD at line 1920 prints `16+LV('pvt')-(E.pt||0)` and must use the same `enrAt`; move it into a shared helper `enrageAt()`.
 
-**Recommended first step:** commit the simulation as `tools/balance-sim.js` and assert target ranges, for example "turns to kill ≤ enrage turn at 1.5× the model's damage". That turns balance into a regression check.
+**Harness built (v6.0.6).** `window.GGBalance` (`<script id="v606-balance-harness">`) runs the game's own `newEnemy()`, `stat()`, `heal()`, `genItem()` and `eBlock()` on a cloned save, and `tools/balance-sim.js` drives it from the command line. It checks results against `tools/balance-baseline.json` (one fight per line, 0.5% tolerance) and, optionally, against design targets. The debug console's **📐 Balance sim** button runs the same model on the phone.
+
+Default run (bare Warrior, required fights only, all-Rare gear, 3 skulls per turn, 750 fights, ~130 ms):
+
+| Difficulty | First guardian the bare hero loses | First guardian that can't be killed before enrage | Peak power needed |
+|---|---|---|---|
+| Story | C9 | C29 (city guardian) | ×26.8 (C49) |
+| Casual | C8 | C21 (city guardian) | ×43.9 (C50 city) |
+| Normal | C4 | C14 | ×81.7 (C50) |
+| Hard | C1 | C8 | ×97.5 (C50) |
+| Grindmaster | C1 (city guardian) | C11 | ×220.8 (C49) |
+
+**Power needed** is how much the excluded systems (passives, skills, research, pets, keystones) must multiply the bare hero's damage to win. It climbs from below ×1 to ×80+ on Normal, so how much those systems actually provide decides whether the endgame is winnable.
+
+**Next steps (design decisions):**
+1. **Calibrate the model:** the Bug Monitor's per-fight BALANCE lines (turns, damage dealt and taken) from real playtests show the real skulls per turn and combo; pass them as `--skulls` and `--combo`.
+2. **Measure real builds:** run `GGBalance.run({build:'current'})` on well-built playtest saves to see what multiplier those systems really provide.
+3. **Write the targets:** copy `tools/balance-targets.example.json` to `balance-targets.json` with real numbers, then tune `campaignStatModifier`, `rewardMul` and the enrage turn until `--targets … --strict` passes. Re-record the baseline in the same commit.
 
 ### Boss ticker logic (enrage + tactics)  [🔍 Pass, with L3]
 
@@ -328,5 +345,5 @@ At 49 cells this measured fine: `hintMove` takes about 0.2 ms. If cascade stutte
 ## Recommended order
 
 1. ~~C1~~, ~~W1~~, ~~W4~~, ~~W3~~: fixed in v6.0.5.
-2. **Build the balance harness**, then decide **W2** with real targets.
+2. ~~Build the balance harness~~ (done, v6.0.6). Next: calibrate it from playtest logs, set targets, then tune W2.
 3. The Lows, opportunistically.
