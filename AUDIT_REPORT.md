@@ -13,15 +13,19 @@ Line numbers refer to `index.html` at that commit.
 
 ---
 
+## Status (2026-11-04)
+
+**Fixed in v6.0.5:** C1, W1, W3, W4. Each was re-tested against the pre-fix build in a running game; the before/after results are listed under each finding. **Still open:** W2 and L1–L8.
+
 ## Severity summary
 
 | # | Severity | Finding | Evidence |
 |---|---|---|---|
-| C1 | **Critical** | Switching class mid-battle gives a free full heal + cleanse | ✅ Verified (real taps) |
-| W1 | **Warning** | Victory modal "Continue" isn't locked while a cascade runs, so the cascade leaks into the next fight | ✅ Verified |
+| C1 | **Critical** | Switching class mid-battle gives a free full heal + cleanse | ✅ Verified (real taps) · **Fixed** |
+| W1 | **Warning** | Victory modal "Continue" isn't locked while a cascade runs, so the cascade leaks into the next fight | ✅ Verified · **Fixed** |
 | W2 | **Warning** | Late-campaign enemy HP grows roughly cubically against a linear player base; boss enrage at turn 16 becomes a wall | 📐 Modelled |
-| W3 | **Warning** | Consolation purse can out-earn winning per turn in the late game (fail-farming) | 📐 Modelled + 🔍 |
-| W4 | **Warning** | An enemy Catalyst+Catalyst wipe ignores the enemy's halved combo slope (flat ×5), stacking to ×20 on enraged Grindmaster bosses | 🔍 Static |
+| W3 | **Warning** | Consolation purse can out-earn winning per turn in the late game (fail-farming) | 📐 Modelled + 🔍 · **Fixed** |
+| W4 | **Warning** | An enemy Catalyst+Catalyst wipe ignores the enemy's halved combo slope (flat ×5), stacking to ×20 on enraged Grindmaster bosses | 🔍 Static · **Fixed** |
 | L1 | Low | Day/night "+25% yield" is a flat +0.25 item per gem, diluted by combo | 🔍 Static |
 | L2 | Low | Infinite Vault scales enemy HP *and* attack by 1.15^wave (exponential, no cap) | 🔍 Static |
 | L3 | Low | Boss tactic clock: Stun pauses the 3-turn clock, Freeze advances it (inconsistent) | 🔍 Static |
@@ -120,7 +124,9 @@ The HUD at line 1920 prints `16+LV('pvt')-(E.pt||0)` and must use the same `enrA
 - **Catalyst+Catalyst is a one-step flat ×5 wipe:** `hit(atk·0.25·49·5)`, about 61× Attack plus skulls.
 - **It doesn't invalidate high-difficulty HP:** at the model's final guardian, enemy HP is about 430× (Normal) to 730× (Grindmaster) hero Attack, so a wipe (≈ 90× Attack including skulls) deals about 12–21%. In mid-game (continent 10, ≈ 43× Attack) a wipe can still one-shot, which is fine for a rare combo. Player burst is **not** the problem; the shortfall is (W2).
 
-### W3 · Consolation purse loop (fail-farming)  [Warning · 📐 + 🔍]
+### W3 · Consolation purse loop (fail-farming)  [Warning · 📐 + 🔍] · ✅ FIXED
+
+> **Fixed as proposed below.** Re-test at node 300: the purse is 110 / 330 / 551 XP for 0% / 50% / 100% of enemy HP dealt (before: the same at every share).
 
 `die()` → `defeatPity()` (1344) pays `PITY = 12.5%` of that node's win XP and gold, scaled by the difficulty's reward factor `r` and by `sqrt(cmod)`. **Retry Encounter** re-fights the same foe immediately.
 
@@ -146,7 +152,9 @@ The campaign wrapper at 3980 multiplies the result and needs no change.
 
 ## 2. Match-3 cascades and RPG state
 
-### W1 · The victory modal lets the next fight start mid-cascade  [Warning · ✅]
+### W1 · The victory modal lets the next fight start mid-cascade  [Warning · ✅] · ✅ FIXED
+
+> **Fixed more centrally than the diff below,** because the Vault (`vaultWin`) and Challenge (`chWin`) victory screens have their own Continue buttons. `resolve()` pins `const E0=E` and checks `if(E!==E0)break` at the top of each step and after each of its `await wait()` points; `swap()` only runs `foe()` while `E===E0`. Re-test with a real long cascade and an instant Continue: before, the next enemy was hit (59 → 19 HP) and took the first turn; after, it stays at 59/59 and takes no turn, and the board is intact.
 
 **Sequence:**
 1. In `resolve()` (1836), the player's cascade keeps looping after the enemy dies. It only breaks on the *player's* death: `if(who&&dead)break`.
@@ -184,7 +192,9 @@ Every multiplier is applied **once per hit** and none compound across steps:
 - The combo `cm` is recomputed from the running `combo` count each step; it isn't multiplied into the previous step's value.
 - Enrage ×2 and Grindmaster `sk` ×2 are applied exactly once in the skull expression.
 
-### W4 · Enemy Catalyst+Catalyst ignores the enemy combo slope  [Warning · 🔍]
+### W4 · Enemy Catalyst+Catalyst ignores the enemy combo slope  [Warning · 🔍] · ✅ FIXED
+
+> **Fixed as proposed below.** Re-test of an enemy wipe: the first skull hit went from 3.0× to 1.8× enemy attack per skull.
 
 **How it happens:**
 - Enemy cascades use a halved slope, `cm = 1 + (combo−1)·0.5`.
@@ -211,7 +221,9 @@ Every multiplier is applied **once per hit** and none compound across steps:
 
 ## 3. RPG subsystems
 
-### C1 · Class switch is a free mid-battle full heal  [Critical · ✅]
+### C1 · Class switch is a free mid-battle full heal  [Critical · ✅] · ✅ FIXED
+
+> **Fixed, slightly stricter than the diff below.** HP also carries between fights (`rest()` restores only 30%), so a switch just before a fight was a free heal too. A class switch now **always** keeps the HP fraction (unless the hero is dead, where retry/return heal anyway). During a live fight it also keeps armor, ailments and the Phoenix flag. Re-test through the same taps: HP fraction 0.077 → 0.077 with Burning kept (before: → 1.0, cleared); between fights 0.5 → 0.5 (before: → 1.0).
 
 **Path, reproduced with real taps at 420×860:** pause (Esc) → **☰ Main menu** → **⚙️ Settings** → Console **Hero** tab → **Change class** → pick any class.
 
@@ -315,9 +327,6 @@ At 49 cells this measured fine: `hintMove` takes about 0.2 ms. If cascade stutte
 
 ## Recommended order
 
-1. **C1**: about a 6-line change plus a regression check.
-2. **W1**: a 2-line change.
-3. **W4**: a 1-line change.
-4. **W3**: purse weighting, a 2-line change.
-5. **Build the balance harness**, then decide **W2** with real targets.
-6. The Lows, opportunistically.
+1. ~~C1~~, ~~W1~~, ~~W4~~, ~~W3~~: fixed in v6.0.5.
+2. **Build the balance harness**, then decide **W2** with real targets.
+3. The Lows, opportunistically.

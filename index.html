@@ -1341,7 +1341,7 @@ else if(!w){S.stage++;R.push(['♾️ Next stage',S.stage])}
 save();
 if(S.opt.qr&&!boss&&!story&&!lt.length&&c.l==l0){fl('🏆 +'+Math.round(xw*st.xp)+' XP · +'+g+' 🪙','#ffd27a','ecard');pnext=next;return}
 rew(boss?'👑 Guardian slain':E.elite?'⭐ Elite defeated':'🏆 Victory',esc(E.n)+' defeated · '+d.ic+' '+d.n,R,story,[['🗺️ Continue journey',next,'on']])}
-const PITY=.125;function defeatPity(){if(GT||!E)return{x:0,g:0};const d=D(),st=stat(),s=E.s||1,boss=E.boss,em=E.elite&&!boss?1.5:1,xw=Math.floor(15*s*(1+s*.15)*d.r*em),g=Math.floor((6+4*s)*st.gold*(boss?3:1)*d.r*em);return{x:Math.max(1,Math.round(xw*PITY)),g:Math.max(1,Math.round(g*PITY))}}
+const PITY=.125;function defeatPity(){if(GT||!E)return{x:0,g:0};const d=D(),st=stat(),s=E.s||1,boss=E.boss,em=E.elite&&!boss?1.5:1,xw=Math.floor(15*s*(1+s*.15)*d.r*em),g=Math.floor((6+4*s)*st.gold*(boss?3:1)*d.r*em);/* v6.0.5 · audit W3: effort-weighted purse: 20% of it for showing up, the rest for the share of HP taken off the foe (still never zero) */const share=E.mx>0?Math.min(1,Math.max(0,(E.mx-Math.max(0,E.hp))/E.mx)):0,k=PITY*(.2+.8*share);return{x:Math.max(1,Math.round(xw*k)),g:Math.max(1,Math.round(g*k))}}
 function die(){if(dead)return;if(!GT&&E&&!P.rez&&stat().ks.phoenix){P.rez=1;P.hp=stat().hp*.3;P.st={burn:0,poison:0};fl('🪶 PHOENIX RITE!','#ffb347','bw',1);msg('Phoenix Rite: you rise from the ashes at 30% HP!');draw();return}dead=true;
 /* v3.4 no-loss defeat: nothing is taken from gold, shards, materials or the bag. A flat pity purse of 12.5% of this node's victory yield (same formula as win()) is paid instead. */
 const pity=defeatPity(),c=C(),l0=c.l;RETRY={stage:S.stage,cm:S.cm};if(pity.x)addXp(pity.x);if(pity.g)S.gold+=pity.g;if(!S.cm)S.stage=Math.max(1,S.stage-1);save();
@@ -1833,11 +1833,11 @@ if(E.st.fi>0)E.st.fi--;for(let i=0;i<FZ.length;i++)if(FZ[i]>0)FZ[i]--;
 if(any){draw();await wait(380)}
 const pd=P.hp<=0;if(pd)die();if(dead){}else if(E.hp<=0&&!E.dead){if(!sty)win()}else if(!pd){roundArm();if(st.ks.bulwark&&!E.dead){addArm(st.hp*.08);fl('🧊 Bulwark','#bff3ff','pcard')}}draw()}
 /* ===== the one resolution loop: mega-combos, matches, spawns, chain detonations, glow, gravity, cascades ===== */
-async function resolve(who,sw){let combo=0,big=false,peak=1,first=1,again=[];
-for(let guard=0;guard<80;guard++){if(who&&dead)break;const pl=!who,st=stat(),m=new Set,keep=new Set,spawns=[],fxq=[],pr=[];let seeded=0,flat=0,wipe=0;
+async function resolve(who,sw){/* v6.0.5 · audit W1: E0 pins the fight this chain belongs to; once Continue swaps in the next enemy the stale chain stops (settle() then deals the new board) */const E0=E;let combo=0,big=false,peak=1,first=1,again=[];
+for(let guard=0;guard<80;guard++){if(who&&dead)break;if(E!==E0)break;const pl=!who,st=stat(),m=new Set,keep=new Set,spawns=[],fxq=[],pr=[];let seeded=0,flat=0,wipe=0;
 SP.forEach((s,i)=>{if(s==5&&B[i]>=0)pr.push(i)});
 if(first&&sw&&isSpec(sw[0])&&isSpec(sw[1])){const r=comboSeed(sw[0],sw[1],fxq);r.m.forEach(i=>m.add(i));seeded=r.n;flat=r.flat;wipe=r.wipe;again=r.again;fl(r.name,pl?'#ffffff':'#ff8a8a','bw',1,'spc');
-if(r.conv.length){syncBoard();r.conv.forEach(i=>{const t=tiles[i];if(t){t.classList.add('spawn');setTimeout(()=>t.classList.remove('spawn'),520)}});await wait(420)}}
+if(r.conv.length){syncBoard();r.conv.forEach(i=>{const t=tiles[i];if(t){t.classList.add('spawn');setTimeout(()=>t.classList.remove('spawn'),520)}});await wait(420);if(E!==E0)break}}
 else if(first&&sw&&(B[sw[0]]==8||B[sw[1]]==8)){const ct=tiles[B[sw[0]]==8?sw[0]:sw[1]],r=catSeed(sw[0],sw[1]);r.m.forEach(i=>m.add(i));fxq.push({s:4,i:r.src,t:r.t,c:r.col});seeded=1;
 if(pl&&r.col>=0&&LV('pri')&&ct&&!ct._echo&&Math.random()<.2*LV('pri')){ct._echo=1;keep.add(r.src);spawns.push({i:r.src,s:4,c:8,cells:new Set([r.src])});fl('🌀 Primeval Catalyst endures!','#e9d5ff','pcard')}}
 else if(pr.length||again.length){pr.forEach(i=>m.add(i));for(const c of again){sq(c,2).forEach(i=>{if(B[i]>=0)m.add(i)});fxq.push({s:5,i:c,c:isM(B[c])?B[c]:-1,r:2})}if(again.length)fl('💥 SECOND DETONATION!','#ffd23f','bw',1,'spc');again=[]}
@@ -1848,15 +1848,15 @@ const det=detonate(m,keep,fxq)+seeded;combo+=1+det;
 const cs=[0,0,0,0,0,0,0];for(const sp of spawns)if(isM(B[sp.i]))cs[B[sp.i]]++;
 const rk=new Set;m.forEach(i=>{if(B[i]!=7)for(const j of nb4(i))if(B[j]==7&&!m.has(j))rk.add(j)});
 let rocks=rk.size;m.forEach(i=>{if(isM(B[i]))cs[B[i]]++;else if(B[i]==7)rocks++});const all=[...m,...rk];
-let cm=pl?1+(combo-1)*(st.ks.chain?1.5:1):1+(combo-1)*.5;if(flat){combo=Math.max(combo,flat);cm=flat}peak=Math.max(peak,cm);if(pl&&cm>S.ach.casc)S.ach.casc=cm;
-if(fxq.length){fxPlay(fxq);shake(fxq.some(f=>f.s==4||f.s==7||f.r==2||f.w)||det>2);if(det)fl('+×'+det+' '+fxName(fxq)+' COMBO!',pl?'#7df9ff':'#ff8a8a','bw',1,'spc');await wait(280)}
+let cm=pl?1+(combo-1)*(st.ks.chain?1.5:1):1+(combo-1)*.5;if(flat){combo=Math.max(combo,flat);cm=pl?flat:1+(flat-1)*.5/* v6.0.5 · audit W4: enemy wipes ×3, not ×5 */}peak=Math.max(peak,cm);if(pl&&cm>S.ach.casc)S.ach.casc=cm;
+if(fxq.length){fxPlay(fxq);shake(fxq.some(f=>f.s==4||f.s==7||f.r==2||f.w)||det>2);if(det)fl('+×'+det+' '+fxName(fxq)+' COMBO!',pl?'#7df9ff':'#ff8a8a','bw',1,'spc');await wait(280)}if(E!==E0)break;
 if(det&&pl&&st.ks.storm&&!GT&&!E.dead){fl('🌩️ Chain Lightning ×'+det,'#fff27a','ecard');hit(st.atk*.6*det*BX('ks_storm')/*BX*/)}
 if(combo>1)fl('COMBO ×'+fmtM(cm)+'!',pl?'#ffd23f':'#ff6b6b','bw',1);
-glowFlash(all,cs);await wait(150);
+glowFlash(all,cs);await wait(150);if(E!==E0)break;
 for(const sp of spawns)sp.cells.forEach(i=>{if(i!=sp.i&&m.has(i)&&tiles[i])setPos(tiles[i],sp.i)});
 sfx('match',combo);all.forEach(i=>{const t=tiles[i];if(t){t.classList.add('pop');burst(i,B[i])}});
 keep.forEach(i=>{const t=tiles[i];if(t){t.classList.remove('match-glow-flash');if(SP[i]==5){t.classList.add('prime');setTimeout(()=>t.classList.remove('prime'),450)}}});
-await wait(230);all.forEach(i=>{if(tiles[i]){tiles[i].remove();tiles[i]=null}B[i]=-1});
+await wait(230);if(E!==E0)break;all.forEach(i=>{if(tiles[i]){tiles[i].remove();tiles[i]=null}B[i]=-1});
 for(const sp of spawns){B[sp.i]=sp.c;SP[sp.i]=sp.s;FZ[sp.i]=0;const t=tiles[sp.i];if(t){t.classList.remove('match-glow-flash');t.classList.add('spawn');setTimeout(()=>t.classList.remove('spawn'),520)}fl(SPN[sp.s]+'!','#ffffff','bw')}
 if(rocks)fl('🪨 '+rocks+' Cursed Rock'+(rocks>1?'s':'')+' shattered','#cbd5e1','pcard');
 const gd=Math.floor((cs[1]*2+(GT?0:m.size*st.score))*st.gold*cm);
@@ -1871,7 +1871,7 @@ if(cs[2])cleanse(pl?'p':'e')}
 all.forEach(i=>{B[i]=-1;FZ[i]=0;SP[i]=0;TR[i]=0});
 for(let x=0;x<N;x++){let w=N-1;for(let y=N-1;y>=0;y--){const s=y*N+x;if(B[s]>=0){if(w!=y){const d=w*N+x;for(const A of[B,tiles,FZ,SP,TR]){A[d]=A[s];A[s]=A===tiles?null:A===B?-1:0}}w--}}
 for(let n=0;w>=0;w--,n++){const d=w*N+x;B[d]=rnd();FZ[d]=0;SP[d]=0;TR[d]=0;if(tiles[d])tiles[d].remove();tiles[d]=mkTile(B[d],d,-1-n)}}
-syncBoard();await wait(320);
+syncBoard();await wait(320);if(E!==E0)break;
 if(cs[6]&&!GT){if(who){if(st.ks.iron)fl('💀 Immune','#9ca3af');else{await atk(0);await pdmg(E.at*.6*cs[6]*cm*D().sk*(E.enr?2:1)*BX('skull_e')/*BX*/,0)}if(E.elite&&!dead)eliteHex()}else if(!st.ks.splash&&Math.random()<eBlock()){fl('🛡️ BLOCKED!'+(S.fg.pen?'':' Forge a Piercer'),'#93c5fd','ecard');msg(E.n+' blocked your skull attack!')}else{hit(st.atk*.8*cs[6]*cm*st.skd*D().sk*(st.ks.splash?1.25:1)*(guard>0?1+.06*LV('csr'):1)*BX('skull_p')/*BX*/);if(st.ks.splash&&!E.dead){fl('🌋 Elemental Splash','#ff9a3a','ecard');inflict('e','burn',2)}}}
 if(wipe&&!GT&&!E.dead&&!dead){if(pl){fl('🌌 BOARD WIPE ×'+fmtM(cm)+'!','#e9d5ff','ecard');hit(st.atk*.25*all.length*cm*BX('wipe_p')/*BX*/)}else{await atk(1);await pdmg(E.at*3*BX('wipe_e')/*BX*/,1)}}
 draw();achCheck()}
@@ -1892,10 +1892,10 @@ if(m){hl=m;draw();await wait(550);hl=[];swapTiles(m[0],m[1]);await wait(300);if(
 t.hidden=true;if(!stop())await roundEnd();draw()}catch(err){console.error('[Gemgrind] Enemy turn interrupted; releasing combat controls.',err);try{msg('Enemy turn was interrupted. Combat controls have been restored.')}catch(e2){}}finally{try{$('turnb').hidden=true;$('ef').classList.remove('lunge','hv');$('pcard').classList.remove('hit');hl=[];draw()}catch(cleanupErr){console.error('[Gemgrind] Enemy-turn final cleanup failed.',cleanupErr)}}}
 function snapP(){if(E&&!GT&&!E.p0)E.p0={hp:P.hp,arm:P.arm,st:Object.assign({},P.st)}}
 async function swap(a,b){if(busy||sty||PAUSED)return;snapP();if(locked(a)||locked(b)){const rk=B[a]==7||B[b]==7;msg(rk?'Cursed Rocks cannot be moved. Match next to them to shatter them.':'That gem is frozen. Match Emeralds or drink a Cleanse Potion to thaw it.');fl(rk?'🪨 CURSED!':'❄️ FROZEN!','#7dd3fc','pcard');sel=null;draw();return}
-busy=true;const mega=isSpec(a)&&isSpec(b);swapTiles(a,b);await wait(200);if(!mega&&B[a]!=8&&B[b]!=8&&!has3()){swapTiles(a,b);await wait(200)}else{if(!GT)turnTick();const bonus=await resolve(0,[a,b]);if(bonus&&!GT&&!E.dead){const st=stat();if(st.quad>0){const v=st.cap*st.quad;addArm(v);fl('🛡️ Quad Guard +'+Math.round(v),'#93c5fd','pcard')}}await ensure();
+busy=true;const E0=E;const mega=isSpec(a)&&isSpec(b);swapTiles(a,b);await wait(200);if(!mega&&B[a]!=8&&B[b]!=8&&!has3()){swapTiles(a,b);await wait(200)}else{if(!GT)turnTick();const bonus=await resolve(0,[a,b]);if(bonus&&!GT&&!E.dead){const st=stat();if(st.quad>0){const v=st.cap*st.quad;addArm(v);fl('🛡️ Quad Guard +'+Math.round(v),'#93c5fd','pcard')}}await ensure();
 if(GT){if(bonus)fl('⭐ Free move!','#ffd27a','ecard');else GT.mv--;save();if(GT.mv<=0){busy=false;endGather()}}
 else if(bonus&&!stat().ks.chain&&!E.dead&&!sty){qev('ex');fl('⭐ Extra turn!','#ffd27a','pcard');msg('4+ match! Extra turn.');save()}
-else{await foe();await ensure();save()}}busy=false;settle();draw()}
+else if(E===E0){await foe();await ensure();save()}}busy=false;settle();draw()}
 function tap(i){if(sty||busy||PAUSED)return;poke();if(sel==null)sel=i;else{const a=sel;sel=null;const dx=Math.abs(a%N-i%N),dy=Math.abs((a/N|0)-(i/N|0));if(dx+dy==1)return swap(a,i);sel=i}draw()}
 /* ===== HUD ===== */
 const chips=m=>m.map((v,i)=>'<span class="mc t'+i+'">'+v+'</span>').join('');
@@ -1929,7 +1929,7 @@ $('eh').style.width=100*Math.max(0,E.hp)/E.mx+'%';$('et').textContent=Math.max(0
  if(sk._bar!==sig||sk.children.length<it.length){sk._bar=sig;sk._h=null;sk.innerHTML='';it.forEach((x,i)=>{const e=document.createElement('button');e.className='sk2';e.innerHTML=x.h;e.dataset.skillType=x.m.type;e.dataset.element=x.m.el;e.dataset.tags=x.m.type+' '+x.m.el+' '+x.k[2];e.title=x.k[0]+' · '+x.m.type+' · '+x.m.el;e.onclick=()=>castP(i);sk.append(e)})}
  it.forEach((x,i)=>{const e=sk.children[i];if(e.classList.contains('gate-locked')){if(x.dis)e.dataset.gwd='1';else delete e.dataset.gwd;e.disabled=false}else e.disabled=x.dis})}}
 {const h='⏩<br>×'+SPD();if(spdB._h!==h){spdB._h=h;spdB.innerHTML=h}}if(sk.lastChild!==spdB)sk.append(spdB);syncBoard()}
-function renderCls(){const el=$('cls');el.innerHTML='';for(const k in CL){const e=document.createElement('button');e.innerHTML=CL[k].i+' <b>'+k+'</b> Lv '+S.c[k].l+'<br><span class="m">'+CL[k].d+'</span><br><span class="m" style="color:#e9c88c">'+CLP[k].split(' · ')[0]+'</span>';e.className=k==S.cls?'on':'';e.onclick=()=>{if(busy)return;S.cls=k;wsel=-1;wcen=0;heal();$('clsm').hidden=true;upd()};el.append(e)}}
+function renderCls(){const el=$('cls');el.innerHTML='';for(const k in CL){const e=document.createElement('button');e.innerHTML=CL[k].i+' <b>'+k+'</b> Lv '+S.c[k].l+'<br><span class="m">'+CL[k].d+'</span><br><span class="m" style="color:#e9c88c">'+CLP[k].split(' · ')[0]+'</span>';e.className=k==S.cls?'on':'';e.onclick=()=>{if(busy)return;/* v6.0.5 · audit C1: a class switch is never a free heal. The HP fraction always carries over (HP also carries between fights); during a live fight armor, ailments and the Phoenix flag do too. Mana and combo still reset. */const live=!GT&&!!E&&!E.dead&&!dead&&(E.pt>0||E.hp<E.mx),f=dead||!(P.hp>0)?1:Math.min(1,P.hp/Math.max(1,stat().hp)),ka={arm:P.arm,st:Object.assign({},P.st),rez:P.rez};S.cls=k;wsel=-1;wcen=0;heal();{const s=stat();P.hp=Math.max(1,s.hp*f);if(live){P.arm=Math.min(ka.arm,s.cap);P.st=ka.st;P.rez=ka.rez}}$('clsm').hidden=true;upd()};el.append(e)}}
 function renderLevels(){$('skl').innerHTML=[['⚔️ Combat',[0,1,2,3,4]],['🌲 Gathering',[5,6,7,8]],['⚒️ Artisan',[9,10]]].map(([t,ix])=>'<h3 class="mt">'+t+'</h3>'+ix.map(i=>'<div class="row sp"><span>'+SK[i]+' <b>'+S.sk[i]+'</b></span><span class="m">'+SKD[i]+'</span></div><div class="bar"><i style="width:'+Math.min(100,100*(S.sx[i]||0)/sneed(S.sk[i]))+'%"></i></div>').join('<div style="height:5px"></div>')).join('')+'<div class="m mt">Gathering tiers (Bronze → Iron → Steel → Mithril → Rune) unlock at levels '+GLV.join(', ')+'. Foraging collects the reagent of the Act you gather in.</div>'}
 /* =====================================================================
    v3.4 HERO 2D — layered grim-dark paper doll (replaces the old 3D stage).
