@@ -46,7 +46,19 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
   ```js
   const _draw=draw;draw=function(){const r=_draw.apply(this,arguments);try{mySync()}catch(e){}return r};
   ```
-  Later layers run *outside* earlier ones. Before changing a function, grep for every `_name=name` wrapper of it (`draw`, `drawHud`, `stat`, `newEnemy`, `syncBoard`, `win`, `die` and `renderCls` each have several).
+  Later layers run *outside* earlier ones. Before changing a function, grep for every `_name=name` wrapper of it (`win`, `die`, `swap`, `foe`, `hit`, `pdmg` and other combat functions still have several).
+- **Consolidated hook lists (v6.1, ongoing layer merge):** these functions are no longer wrapped. Each runs its base body, then every hook registered for it, in registration (document) order. Never re-wrap them: register a hook in your layer.
+
+  | Function | Base body | Register with | Hook receives |
+  |---|---|---|---|
+  | `draw()` | `drawBase()` | `onDraw(f)` | nothing |
+  | `drawHud()` | `hudBase()` | `onHud(f)` | nothing |
+  | `stat()` | `statBase()` | `onStat(f)` | the stat sheet `s`; modify it in place (don't return a new object) |
+  | `newEnemy()` | `enemyBase()` | `onEnemy(f)` | nothing (read/modify `E`) |
+  | `syncBoard()` | `syncBase()` | `onSync(f)` | nothing |
+  | `renderCls()` | `clsBase()` | `onCls(f)` | nothing |
+
+  The debug tools' generic `wrap()` (Bug Monitor) still wraps `newEnemy` from outside; that's fine. The runner has no try/catch, so put your hook body in `try{}catch(e){}` unless an error should stop the hooks after it. Hooks run even when the base body returns early (no enemy). The hook code itself stays in its feature layer because it uses that layer's private state.
 - **`debug-tools`:** `<script id="debug-tools" type="text/plain">`. It's inert, and the `debug-loader` after it runs it when debug is on (default during playtesting, `DEBUG_DEFAULT`). While `window.GG_SIM` is set, its hooks pass straight through.
 - **`v606-balance-harness`:** `window.GGBalance.run(opts)` swaps `S`/`E`/`P` and the combat flags for clones, seeds `Math.random`, runs the real `newEnemy()`/`stat()`/`heal()`/`genItem()` synchronously, and restores everything. It must stay read-only: never call `save()`, `draw()` or `win()`/`die()` from it. It lives outside `debug-tools` so the CLI keeps working after release. With debug off, the loader provides a read-only `window.DBAL` so the baked balance profile still applies. Nothing outside the block may *require* debug globals; always check first (`window.logDebugIssue&&…`).
 - **Core globals:**
