@@ -1161,7 +1161,7 @@ if(!S.c||typeof S.c!='object'||Array.isArray(S.c))S.c={};for(const k in CL){let 
 if(!Array.isArray(S.sk))S.sk=d.sk.slice();if(!Array.isArray(S.sx))S.sx=[];if(S.sk.length==9){S.sk.splice(8,0,1);S.sx.splice(8,0,0)}while(S.sk.length<SK.length)S.sk.push(1);/* v5.5: skill levels and xp must be real numbers */S.sk=S.sk.slice(0,SK.length).map((v,i)=>{const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(999,Math.floor(n))):(d.sk[i]|0)});S.sx=S.sx.slice(0,SK.length).map(v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:0});
 if(!S.mat||typeof S.mat!='object')S.mat=d.mat;for(const m in d.mat)if(!Array.isArray(S.mat[m])||S.mat[m].length!=5)S.mat[m]=d.mat[m];
 /* v5.4 audit 58: normalize persisted currencies and every material tier before gameplay uses them */
-const safeCount=v=>{const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(n))):0};for(const k of['gold','ess','gs'])S[k]=safeCount(S[k]);for(const m of Object.keys(d.mat))S.mat[m]=Array.from({length:5},(_,i)=>safeCount(S.mat[m][i]));
+const safeCount=v=>{const n=Number(v);return Number.isFinite(n)?Math.max(0,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(n))):0};for(const k of['gold','ess','gs'])S[k]=safeCount(S[k]);/* v6.0.6 · audit L5: class level ≤ 9999, forge 0..FMAX, potions and the travel clock are whole non-negative counts */for(const k in S.c){const c=S.c[k];if(c&&typeof c=='object'&&c.l>9999)c.l=9999}if(!S.fg||typeof S.fg!='object'||Array.isArray(S.fg))S.fg={};for(const k of Object.keys(d.fg))S.fg[k]=Math.min(FMAX,safeCount(S.fg[k]));if(!S.alc||typeof S.alc!='object'||Array.isArray(S.alc))S.alc={};for(const k of Object.keys(d.alc))S.alc[k]=Math.min(9999,safeCount(S.alc[k]));S.trav=safeCount(S.trav);for(const m of Object.keys(d.mat))S.mat[m]=Array.from({length:5},(_,i)=>safeCount(S.mat[m][i]));
 S.fg=Object.assign(d.fg,S.fg);S.ach=Object.assign(d.ach,S.ach&&typeof S.ach=='object'?S.ach:{});for(const k of['got','seen'])if(!S.ach[k]||typeof S.ach[k]!='object')S.ach[k]={};/* v5.4 audit 66: only claimed bounties count as seen (got now holds a 0 entry for every bounty) */for(const k in S.ach.got)if(S.ach.got[k]===1)S.ach.seen[k]=1;for(const k of['dmg','casc','sk','ore'])if(!isFinite(S.ach[k]))S.ach[k]=k=='casc'?1:0;
 if(S.opt&&S.opt.mus==null&&isFinite(S.opt.vol))S.opt.mus=Math.max(0,Math.min(1,S.opt.vol/100));S.opt=Object.assign(d.opt,S.opt);try{const x=JSON.parse(localStorage.getItem('gg_mix')||'null');if(x)for(const k of['mus','sfx','narv'])if(isFinite(x[k]))S.opt[k]=x[k]}catch(e){}for(const k of['mus','sfx','narv'])if(!(S.opt[k]>=0&&S.opt[k]<=1))S.opt[k]=d.opt[k];if(!(Number.isInteger(S.diff)&&S.diff>=0&&S.diff<DIFF.length))S.diff=2;if(!(S.opt.vol>=0&&S.opt.vol<=100))S.opt.vol=60;if(![1,2,3].includes(S.opt.spd))S.opt.spd=1;
 /* v5.4 audit 19: normalize persisted skill levels before they affect power or upgrade costs */
@@ -1212,7 +1212,7 @@ function achShow(){$('menu').hidden=true;const n=achPend(),b=[];if(n)b.push(['�
 const RMQ=matchMedia('(prefers-reduced-motion: reduce)'),RM=()=>!!(S.opt.rm||RMQ.matches),SPD=()=>S.opt.spd||1;
 /* combat clock: PAUSED holds every wait(); bumping BEP abandons any in-flight combat chain (restart / retreat) */
 let BEP=0,PAUSED=0,PQ=[];
-const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();ggLsSave();if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)/(window.QAFF||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
+const need=l=>Math.floor(40*l**2.1),sneed=l=>need(l*.6+1)*.6,save=()=>{S.t=Date.now();/* v6.0.6 · audit L8: remember the HP fraction so a reload is not a free heal (a defeat stores 1: the next fight starts fresh, as Retry does) */try{if(S.hero)S.fhp=dead?1:P.hp>0?Math.min(1,Math.round(P.hp/Math.max(1,stat().hp)*1e4)/1e4):S.fhp}catch(e){}ggLsSave();if(window.GGDB)GGDB.write()},C=()=>S.c[S.cls],wait=async ms=>{const ep=BEP;await new Promise(r=>setTimeout(r,ms*(S.opt.rm?.45:1)/SPD()*(window.JXT||1)/(window.QAFF||1)));{const jh=(window.JXS||0)-performance.now();if(jh>0)await new Promise(r=>setTimeout(r,jh))}while(PAUSED)await new Promise(r=>PQ.push(r));if(ep!==BEP)await new Promise(()=>{})},D=()=>DIFF[S.diff]||DIFF[2];
 let tsk=null,tsv=null;
 function tstat(){const c=C(),key=S.cls+':'+c.n.join();if(key===tsk)return tsv;const t={dodge:0,score:0,cdr:0,hp:0,mana:0,sh:0,all:0,wh:0,cd:[0,0,0,0,0,0],ks:{},quad:0,dur:0,gm:[0,0,0,0,0,0],crit:0,lsx:0,skd:0,pen:0,pot:0};
 for(const i of c.n){const o=WEB.n[i];if(!o)continue;if(o.t=='hy'){for(const q in o.s.fx)t[q]=(t[q]||0)+o.s.fx[q]}else if(o.t=='su'){const s=o.s;if(s.k=='gm')t.gm[s.c]+=s.v;else if(s.k=='all')t.all+=s.v/100;else t[s.k]+=s.v}else if(o.t=='mx')t.ks[o.m[0]]=1;else if(o.t=='mi')t[o.s[0]]+=o.s[1];else if(o.t=='ks')t.ks[o.k[0]]=1;else if(o.all)t.all+=o.all/100;else if(o.c!=null){t.cd[o.c]+=o.v/100;t.wh++}}tsk=key;return tsv=t}
@@ -1429,9 +1429,9 @@ o.sold=1;msg('Bought from the merchant for 🪙 '+c+'.');upd();merch(mI)}
 /* ===== gathering ===== */
 function startGather(){if(PAUSED)abortCombat();GT={mv:TRIP,a:gact(),got:{ore:[0,0,0,0,0],log:[0,0,0,0,0],fish:[0,0,0,0,0],herb:[0,0,0,0,0]},xp:[0,0,0,0],g:0};newBoard();showTab('battle');msg('⛏️ '+ACTS[GT.a].t+' gathering trip: '+TRIP+' moves.');upd()}
 function stopGather(){GT=null;newBoard()}
-const yb=m=>{const b=.1*S.lab.bot+(DN[dnPh()][2].includes(m)?.25:0);return Math.floor(b)+(Math.random()<b%1?1:0)};
+/* v6.0.6 · audit L1: the sky / Botanical bonus is a share of the haul (q), not a flat +0.25 item, so "+25% yield" holds at every combo */const yb=(m,q)=>{const b=(.1*S.lab.bot+(DN[dnPh()][2].includes(m)?.25:0))*(q||1);return Math.floor(b)+(Math.random()<b%1?1:0)};
 function gcollect(cs,cm){const a=GT.a;for(const g in G2M){const n=cs[g];if(!n)continue;const m=G2M[g],s=GSK[m],q=Math.max(1,Math.round(cm));let got=0;
-for(let i=0;i<n;i++){const t=m=='herb'?a:Math.random()<.65?gtier(m):Math.floor(Math.random()*(gtier(m)+1)),x=m=='herb'?6+4*a:GXP[t],qq=(q+yb(m))*(Math.random()<.05*LV('ayl')?2:1);S.mat[m][t]+=qq;GT.got[m][t]+=qq;got+=qq;GT.xp[s-5]+=x*BAL.xp;gxp(s,x)}
+for(let i=0;i<n;i++){const t=m=='herb'?a:Math.random()<.65?gtier(m):Math.floor(Math.random()*(gtier(m)+1)),x=m=='herb'?6+4*a:GXP[t],qq=(q+yb(m,q))*(Math.random()<.05*LV('ayl')?2:1);S.mat[m][t]+=qq;GT.got[m][t]+=qq;got+=qq;GT.xp[s-5]+=x*BAL.xp;gxp(s,x)}
 fl('+'+got+' '+GSKIN[a].i[GIX[m]],'#9be38a','ecard');qev('gath',got);if(m=='ore')S.ach.ore+=got}achCheck()}
 function endGather(){const g=GT,R=[];for(const m in g.got)g.got[m].forEach((n,t)=>{if(n)R.push([MI[m]+' '+matName(m,t),'+'+n])});
 g.xp.forEach((x,i)=>{if(x)R.push(['📈 '+SK[5+i]+' XP','+'+Math.round(x)+' (Lv '+S.sk[5+i]+')'])});if(g.g)R.push(['🪙 Gold','+'+g.g]);if(!R.length)R.push(['Nothing gathered','—']);save();
@@ -1680,7 +1680,11 @@ function ggSkullRefresh(){try{for(const t of tiles)if(t)t._v=-9;syncBoard()}catc
 const rnd=()=>Math.floor(Math.random()*7),isM=v=>v>=0&&v<7,locked=i=>B[i]==7||FZ[i]>0,ic=(v,i)=>{/* v5.4 audit 59: hi-res sprites only for the six colour gems outside gathering; skulls (6) and gathering skins keep their original art */if(v>=0&&v<6&&!GT){const sp=(typeof i==='number'&&SP)?SP[i]||0:0;const kind=(sp===1||sp===2)?'attack':(sp===3||sp===5)?'four':'standard';return GG_GEM_IMAGE(kind,v)}if(v===8)return GG_GEM_IMAGE('ultimate',0);if(v===6&&!GT){const k=ggSk6();if(k>0)return GG_SKULL_IMG(k)}if(GT&&v>=0&&v<7)return GG_GATHER_IMG(GT.a,v);const h=GT&&v in GVI?GSKIN[GT.a].i[GVI[v]]:runeSvg(v);return window.V53?V53.tile(v,h):h};
 function init(){B=[];for(let i=0;i<N*N;i++){let v;do v=rnd();while(i%N>1&&B[i-1]==v&&B[i-2]==v||i>=2*N&&B[i-N]==v&&B[i-2*N]==v);B.push(v)}}
 const has3=()=>{for(let y=0;y<N;y++)for(let x=0;x<N;x++){const i=y*N+x,v=B[i];if(isM(v)&&(x<N-2&&B[i+1]==v&&B[i+2]==v||y<N-2&&B[i+N]==v&&B[i+2*N]==v))return true}return false};
-function tryMoves(f){for(let a=0;a<N*N;a++)for(const b of[a+1,a+N]){if(b>=N*N||(b==a+1&&a%N==N-1)||locked(a)||locked(b))continue;[B[a],B[b]]=[B[b],B[a]];const r=f(a,b);[B[a],B[b]]=[B[b],B[a]];if(r===true)return true}return false}
+/* v6.0.6 · audit L4: every random gem that appears mid-fight (cascade refill, Thawing Rune) comes from refillGem(), so rules can shape it at the source */
+var refillGem=()=>rnd();
+/* v6.0.6 · audit L7: a swap can only create a match through a or b, so the callback (which runs a full find()/groups()) is skipped for swaps that make no line there; with a match already on the board every swap is still offered */
+const lineAt=i=>{const v=B[i];if(!isM(v))return false;const x=i%N,y=i/N|0;let h=1,c=1;for(let k=x-1;k>=0&&B[y*N+k]==v;k--)h++;for(let k=x+1;k<N&&B[y*N+k]==v;k++)h++;if(h>=3)return true;for(let k=y-1;k>=0&&B[k*N+x]==v;k--)c++;for(let k=y+1;k<N&&B[k*N+x]==v;k++)c++;return c>=3};
+function tryMoves(f){const pre=has3();for(let a=0;a<N*N;a++)for(const b of[a+1,a+N]){if(b>=N*N||(b==a+1&&a%N==N-1)||locked(a)||locked(b))continue;[B[a],B[b]]=[B[b],B[a]];if(!pre&&!lineAt(a)&&!lineAt(b)){[B[a],B[b]]=[B[b],B[a]];continue}const r=f(a,b);[B[a],B[b]]=[B[b],B[a]];if(r===true)return true}return false}
 const nb4=i=>{const x=i%N;return[i-N,i+N,x>0?i-1:-1,x<N-1?i+1:-1].filter(j=>j>=0&&j<N*N)};
 function catMove(){for(let a=0;a<N*N;a++){if(B[a]!=8||FZ[a])continue;for(const b of nb4(a))if(!locked(b)&&(isM(B[b])||B[b]==8))return[a,b]}return null}
 const isSpec=i=>i>=0&&i<N*N&&B[i]>=0&&(B[i]==8||SP[i]==1||SP[i]==2||SP[i]==3||SP[i]==5),spKind=i=>B[i]==8?'c':SP[i]==1||SP[i]==2?'s':'w';
@@ -1820,7 +1824,7 @@ else{rocks(pickN(freeT(),3));freezeTiles(pickN(freeT(),4),2);inflict('p',Math.ra
 syncBoard();cosmos();draw();await wait(450);if(has3())await resolve(1);await ensure();t.hidden=true}
 function cosmos(){const L=LV('cos');if(!L||GT||!E||E.dead||dead)return;const st=stat(),v=Math.max(0,st.hp-P.hp)*.02*L;if(v<1)return;P.hp=Math.min(st.hp,P.hp+v);fl('✴️ Cosmos Defiance +'+Math.round(v)+' HP','#e9d5ff','pcard')}
 /* boss clock: more than 15 player turns -> ENRAGED (skulls x2, permanent burning border) */
-function weave(){const L=[];B.forEach((v,i)=>{if(v==7||FZ[i]>0)L.push(i)});if(!L.length)return;const i=L[Math.floor(Math.random()*L.length)];FZ[i]=0;if(B[i]==7){B[i]=rnd();SP[i]=0}fl('♨️ Thawing Rune frees a tile','#c9f3ff','pcard');syncBoard()}
+function weave(){const L=[];B.forEach((v,i)=>{if(v==7||FZ[i]>0)L.push(i)});if(!L.length)return;const i=L[Math.floor(Math.random()*L.length)];FZ[i]=0;if(B[i]==7){B[i]=refillGem();SP[i]=0}fl('♨️ Thawing Rune frees a tile','#c9f3ff','pcard');syncBoard()}
 function turnTick(){if(!E||GT||E.dead)return;E.pt=(E.pt||0)+1;if(E.pt%3==0&&stat().ks.weaver)weave();if(E.boss&&!E.enr&&E.pt>15+LV('pvt')){E.enr=1;fl('😡 ENRAGED!','#ff3a2a','bw',1);msg(E.n+' is ENRAGED! Its skulls hit twice as hard and the board burns every round.');syncBoard()}}
 async function roundEnd(){const st=stat();let any=0;
 if(E.enr&&!E.dead)P.st.burn=Math.max(P.st.burn,1);if(P.st.burn>0){const d=Math.max(1,st.hp*(E.enr?.09:.05)*BX('dot_burn_p')/*BX*/);P.hp-=d;fl('🔥 -'+Math.round(d)+' DMG','#ff7a3a','pcard');P.st.burn--;any=1}
@@ -1870,7 +1874,7 @@ if(cs[2])cleanse(pl?'p':'e')}
 {const tp=all.filter(i=>TR[i]>0).length;if(tp&&who&&!GT&&!E.dead){fl('🪤 '+tp+' TRAP'+(tp>1?'S':'')+' SPRUNG!','#9be38a','ecard',1);hit(st.atk*1.6*tp*BX('trap_sprung')/*BX*/);sfx('impact',1)}}
 all.forEach(i=>{B[i]=-1;FZ[i]=0;SP[i]=0;TR[i]=0});
 for(let x=0;x<N;x++){let w=N-1;for(let y=N-1;y>=0;y--){const s=y*N+x;if(B[s]>=0){if(w!=y){const d=w*N+x;for(const A of[B,tiles,FZ,SP,TR]){A[d]=A[s];A[s]=A===tiles?null:A===B?-1:0}}w--}}
-for(let n=0;w>=0;w--,n++){const d=w*N+x;B[d]=rnd();FZ[d]=0;SP[d]=0;TR[d]=0;if(tiles[d])tiles[d].remove();tiles[d]=mkTile(B[d],d,-1-n)}}
+for(let n=0;w>=0;w--,n++){const d=w*N+x;B[d]=refillGem();FZ[d]=0;SP[d]=0;TR[d]=0;if(tiles[d])tiles[d].remove();tiles[d]=mkTile(B[d],d,-1-n)}}
 syncBoard();await wait(320);if(E!==E0)break;
 if(cs[6]&&!GT){if(who){if(st.ks.iron)fl('💀 Immune','#9ca3af');else{await atk(0);await pdmg(E.at*.6*cs[6]*cm*D().sk*(E.enr?2:1)*BX('skull_e')/*BX*/,0)}if(E.elite&&!dead)eliteHex()}else if(!st.ks.splash&&Math.random()<eBlock()){fl('🛡️ BLOCKED!'+(S.fg.pen?'':' Forge a Piercer'),'#93c5fd','ecard');msg(E.n+' blocked your skull attack!')}else{hit(st.atk*.8*cs[6]*cm*st.skd*D().sk*(st.ks.splash?1.25:1)*(guard>0?1+.06*LV('csr'):1)*BX('skull_p')/*BX*/);if(st.ks.splash&&!E.dead){fl('🌋 Elemental Splash','#ff9a3a','ecard');inflict('e','burn',2)}}}
 if(wipe&&!GT&&!E.dead&&!dead){if(pl){fl('🌌 BOARD WIPE ×'+fmtM(cm)+'!','#e9d5ff','ecard');hit(st.atk*.25*all.length*cm*BX('wipe_p')/*BX*/)}else{await atk(1);await pdmg(E.at*3*BX('wipe_e')/*BX*/,1)}}
@@ -1883,8 +1887,8 @@ for(let a=0;a<N*N;a++){if(B[a]!=8||FZ[a])continue;for(const b of nb4(a)){if(lock
 if(!L.length)return null;L.sort((x,y)=>y[0]-x[0]);const p=Math.random()<.7?L[0]:L[Math.floor(Math.random()*L.length)];return[p[1],p[2]]}
 async function foe(){try{if(sty||GT||E.dead||E.hp<=0)return;dead=false;const t=$('turnb'),stop=()=>dead||sty||E.dead;
 if(E.st.stun>0){E.st.stun=0;t.hidden=false;t.textContent='💫 '+E.n+' is stunned! Its next intent is delayed.';fl('STUNNED!','#ffe14a','ecard');sfx('impact',0);await wait(700);t.hidden=true;await roundEnd();return}
-E.tc++;
 if(E.st.frz>0){E.st.frz=0;E.st.fi=2;t.hidden=false;t.textContent='❄️ '+E.n+' is frozen solid!';fl('FROZEN!','#7dd3fc','ecard');await wait(650);t.hidden=true;await roundEnd();return}
+E.tc++;/* v6.0.6 · audit L3: counted after Stun AND Freeze, so both pause the 3-turn tactic clock */
 if(E.tac&&E.tc%3==0){await bossTactic();if(stop()){t.hidden=true;draw();return}}
 await eskill();if(stop()){t.hidden=true;draw();return}
 for(let n=0,again=true;again&&n<3;n++){again=false;t.hidden=false;t.textContent=n?'⭐ '+E.n+' gets an extra turn!':E.n+' is choosing a move…';await wait(450);const m=aiMove();
@@ -3709,7 +3713,8 @@ function hazApply(){const bw=$('bw');if(!bw)return;let h=$('hazfx');if(!h){h=doc
  const on=vOn()&&!GT&&HZ[V().haz],cls=on?'on '+HZ[V().haz].c:'';if(h.className!=cls)h.className=cls;h.style.setProperty('--hz',on&&V().haz=='void'?Math.max(.15,1-.15*LV('vst')):1)}
 function rollHaz(){const ks=Object.keys(HZ).filter(k=>k!=V().haz);V().haz=ks[(R()*ks.length)|0];const z=HZ[V().haz];hazApply();fl(z.i+' '+z.n+'!','#f5cb52','bw',1);msg('Treasury hazard: '+z.n+'. '+z.d)}
 /* wave enemies: base tier fixed at run start, then +15% HP and damage per wave, compounding, with no ceiling */
-const _ne=newEnemy;newEnemy=function(){_ne();if(!vOn()||GT||!E)return;const v=V(),boss=v.wave%5==0,m=Math.pow(1.15,v.wave-1),z=HZ[v.haz]||HZ.lava,tier=v.tier,elite=boss||R()<.25,
+/* v6.0.6 · audit L2: enemy stats and vault rewards share one curve; the cap only keeps numbers finite (reached near wave 200, far past any real run) */const VMUL=w=>Math.min(1e12,Math.pow(1.15,Math.max(0,(w|0)-1)));
+const _ne=newEnemy;newEnemy=function(){_ne();if(!vOn()||GT||!E)return;const v=V(),boss=v.wave%5==0,m=VMUL(v.wave),z=HZ[v.haz]||HZ.lava,tier=v.tier,elite=boss||R()<.25,
  base=boss?VBN[((v.wave/5|0)-1)%VBN.length]:VEN[(R()*VEN.length)|0],nm=(!boss&&elite?'Elite ':'')+base,hue=44;
  Object.assign(E,{n:nm,f:monster(base,hue,boss,z.a),sig:nm+hue+boss+v.wave,hue,s:tier,boss,elite,tac:boss,act:z.a,mx:Math.floor(ehp(tier,boss,S.diff)*m*(elite&&!boss?1.3:1)),at:eat(tier,boss)*m*(elite&&!boss?1.15:1)});E.hp=E.mx;syncBoard()};
 function vaultStart(){const v=V();if(GT)stopGather();homeHide();S.cm=0;S.route='vault';
@@ -3717,7 +3722,7 @@ function vaultStart(){const v=V();if(GT)stopGather();homeHide();S.cm=0;S.route='
  Object.assign(v,{on:1,wave:1,mult:1,tier:Math.max(1,Math.floor(C().l/1.1)),haz:'',sp:spDef()});rollHaz();newEnemy();heal();save();showTab('battle');draw();
  theater('The Infinite Vault of the Scribes','The Chronicler · Endless Treasury','Beneath the Scribes’ archive lies a treasury with no floor. Every ledger ever written was paid for in gold, and the gold sank here.\n\nEach wave you break fills your Treasury Spoils Pouch, and each wave the guardians grow fifteen parts in a hundred stronger, without end. Every fifth wave a sealed door offers you a choice: climb out with everything, or breach deeper for richer spoils. Fall before you climb, and the pouch is lost.',null)}
 function vaultNext(){const v=V();if(v.wave%5==1)rollHaz();newEnemy();rest();showTab('battle');draw();fl('🏛️ Wave '+v.wave+(v.mult>1?' · loot ×'+fmtM(v.mult):''),'#f0d48a','bw',1)}
-function vaultWin(){if(GT||E.dead)return;E.dead=true;const v=V(),sp=v.sp,d=D(),st=stat(),s=E.s,boss=E.boss,em=E.elite&&!boss?1.5:1,wm=Math.pow(1.15,v.wave-1),mu=v.mult,c=C(),l0=c.l,R0=[];
+function vaultWin(){if(GT||E.dead)return;E.dead=true;const v=V(),sp=v.sp,d=D(),st=stat(),s=E.s,boss=E.boss,em=E.elite&&!boss?1.5:1,wm=VMUL(v.wave),mu=v.mult,c=C(),l0=c.l,R0=[];
  const xw=Math.floor(15*s*(1+s*.15)*d.r*em*Math.sqrt(wm)),g=Math.floor((6+4*s)*st.gold*(boss?3:1)*d.r*em*wm*mu);
  addXp(xw);qev('kill');if(boss)qev('boss');qev('gold',g);sp.g+=g;R0.push(['✨ '+S.cls+' XP','+'+Math.round(xw*st.xp)],['🪙 Gold → pouch','+'+g]);
  const nm=Math.max(1,Math.round((1+R()*2+(boss?3:0)+(E.elite?1:0))*mu)),km=['ore','log','fish'][(R()*3)|0],t=gtier(km);sp.m[km][t]+=nm;R0.push([MI[km]+' '+MAT[km][t]+' → pouch','+'+nm]);
@@ -5272,7 +5277,7 @@ const NOEM=[0,1,3,4,5,6],nonEm=()=>NOEM[Math.floor(Math.random()*NOEM.length)];
 function barren(){let n=0;do{for(let i=0;i<B.length;i++)if(B[i]==2)B[i]=nonEm();for(let g=0,m=find();m.size&&g<60;g++,m=find())m.forEach(i=>{B[i]=nonEm()})}while((has3()||!hasMove())&&++n<60)}
 const _fr=fresh;fresh=function(){const sd=CH&&CH.seedNext,MR=Math.random;if(sd){CH.seedNext=0;Math.random=rs(sd)}
  try{const r=_fr.apply(this,arguments);if(!GT&&on('noheal'))barren();return r}finally{Math.random=MR}};
-const _sb=syncBoard;syncBoard=function(){if(!GT&&B.length&&on('noheal'))for(let i=0;i<B.length;i++)if(B[i]==2)B[i]=nonEm();return _sb.apply(this,arguments)};
+/* v6.0.6 · audit L4: Barren Emeralds shapes new gems at the source; syncBoard() no longer rewrites the board */const _rg=refillGem;refillGem=function(){return!GT&&on('noheal')?nonEm():_rg.apply(this,arguments)};
 /* --- rules that touch the player --- */
 const _st=stat;stat=function(){const s=_st.apply(this,arguments);if(!GT&&on('glass'))s.hp*=.7;return s};
 const _up=usePot;usePot=function(k){if(!GT&&on('nopot')){$('potm').hidden=true;msg('🚫 No Potions: this trial forbids drinking potions.');fl('🚫 NO POTIONS','#f87171','pcard');return}return _up.apply(this,arguments)};
@@ -5521,7 +5526,7 @@ async function boot(){const T0=performance.now();
  /* 4 · First foe + the cozy campfire home screen (or the title menu for a brand-new player) */
  mapC=(S.at/21)|0;
  if(S.cm==0&&!(S.vault&&S.vault.on))S.cm=1;
- newEnemy();heal();setFocus(curTab=='battle');
+ newEnemy();heal();/* v6.0.6 · audit L8 */{const f=+S.fhp;if(S.hero&&f>0&&f<1)P.hp=Math.max(1,stat().hp*f)}setFocus(curTab=='battle');
  if(S.hero){$('menu').hidden=true;$('create').hidden=true;GG40.homeShow()}else showMenu();
  draw();
  GG49.boot();startHousekeeping();
@@ -7901,7 +7906,16 @@ function report(){const s=snapshot(),r={format:'gemgrind-daily-balance-report',v
  try{if(window.QAAdvisor)r.advisorPending=QAAdvisor.suggestions.map(x=>({difficulty:DIFF[x.diff].n,slider:x.name,key:x.key,from:x.from,to:x.to,why:x.why}))}catch(_){}
  try{if(window.QATele){const F=QATele.report().fights.filter(f=>f.res!='abandoned');r.qa={fights:F.length,wins:F.filter(f=>f.res=='win').length}}}catch(_){}
  return r}
-const ghCfg=()=>{try{const o=JSON.parse(localStorage.getItem(GHK)||'null');return o&&typeof o=='object'?o:null}catch(_){return null}};
+/* v6.0.6 · audit L6: the token lives apart from the settings. Default: this session only (sessionStorage, gone when the app closes);
+   "Remember token on this device" keeps it in localStorage for the daily auto-upload. A token saved by an older build moves to the remembered slot. */
+const GHT=GHK+'_tok',ssGet=k=>{try{return sessionStorage.getItem(k)}catch(_){return null}},lsGet=k=>{try{return localStorage.getItem(k)}catch(_){return null}};
+const ghCfg=()=>{try{const o=JSON.parse(localStorage.getItem(GHK)||'null');if(!o||typeof o!='object')return null;
+ if(o.token){try{localStorage.setItem(GHT,o.token)}catch(_){}delete o.token;try{localStorage.setItem(GHK,JSON.stringify(o))}catch(_){}}
+ const t=ssGet(GHT)||lsGet(GHT);if(t)o.token=t;o.remember=!!lsGet(GHT);return o}catch(_){return null}};
+const ghSave=o=>{o=Object.assign({},o);const t=o.token,rem=!!o.remember;delete o.token;delete o.remember;
+ try{localStorage.setItem(GHK,JSON.stringify(o))}catch(_){}
+ try{if(t){sessionStorage.setItem(GHT,t);if(rem)localStorage.setItem(GHT,t);else localStorage.removeItem(GHT)}else if(!rem)localStorage.removeItem(GHT)}catch(_){}};
+const ghForget=()=>{try{sessionStorage.removeItem(GHT);localStorage.removeItem(GHT)}catch(_){}};
 const ghOk=c=>!!(c&&c.owner&&c.repo&&c.token);
 const b64=t=>{const u=new TextEncoder().encode(t);let o='';for(let i=0;i<u.length;i+=0x8000)o+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(o)};
 async function ghReq(c,method,path,body,accept){const url='https://api.github.com/repos/'+encodeURIComponent(c.owner)+'/'+encodeURIComponent(c.repo)+'/contents/'+path.split('/').filter(Boolean).map(encodeURIComponent).join('/')+(method=='GET'?'?ref='+encodeURIComponent(c.branch||'main'):'');
@@ -7949,18 +7963,19 @@ function reportsPanel(){const all=reports(),ks=Object.keys(all).sort().reverse()
 function ghPanel(){const c=ghCfg()||{},guess=(()=>{const m=/^([^.]+)\.github\.io$/i.exec(location.hostname);return m?{owner:m[1],repo:(location.pathname.split('/').filter(Boolean)[0]||'')}:{}})();
  const v=k=>esc(c[k]||guess[k]||'');
  const el=popup('☁️ GitHub sync (this device only)',
-  '<div class="tip">Uploads the daily slider report and can push a rebuilt index.html with the sliders baked in. Use a fine-grained token limited to this one repository with “Contents: Read and write”. The token is stored only in this browser’s storage, never in reports, exports or the game save.</div>'
+  '<div class="tip">Uploads the daily slider report and can push a rebuilt index.html with the sliders baked in. Use a fine-grained token limited to this one repository with “Contents: Read and write”. The token is never written to reports, exports or the game save. It is kept for this session only unless you tick “Remember token on this device”.</div>'
   +'<div class="balPF"><label>Owner<input data-f="owner" value="'+v('owner')+'"></label><label>Repository<input data-f="repo" value="'+v('repo')+'"></label><label>Branch<input data-f="branch" value="'+esc(c.branch||'main')+'"></label><label>Game file<input data-f="index" value="'+esc(c.index||'index.html')+'"></label><label>Reports folder<input data-f="dir" value="'+esc(c.dir||'balance-reports')+'"></label><label>Token<input data-f="token" type="password" autocomplete="off" placeholder="'+(c.token?'saved · leave blank to keep':'github_pat_…')+'"></label></div>'
+  +'<label class="tip" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="remember"'+(c.remember?' checked':'')+'> Remember token on this device (needed for the daily auto-upload after a restart)</label>'
   +'<label class="tip" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-f="auto"'+(c.auto===false?'':' checked')+'> Upload the daily report automatically</label>'
   +'<div class="balPR"><button type="button" class="dbgmini" data-p="save">💾 Save settings</button><button type="button" class="dbgmini" data-p="test">🔌 Test</button><button type="button" class="dbgmini" data-p="push">⬆ Push index.html</button>'+(c.token?'<button type="button" class="dbgmini" data-p="forget">🗑 Forget token</button>':'')+'</div><div class="tip" data-p="msg"></div>');
- const read=()=>{const o=Object.assign({},ghCfg()||{});for(const i of el.querySelectorAll('[data-f]')){const k=i.dataset.f;if(k=='auto')o.auto=i.checked;else if(k=='token'){if(i.value.trim())o.token=i.value.trim()}else o[k]=i.value.trim()}return o};
+ const read=()=>{const o=Object.assign({},ghCfg()||{});for(const i of el.querySelectorAll('[data-f]')){const k=i.dataset.f;if(k=='auto')o.auto=i.checked;else if(k=='remember')o.remember=i.checked;else if(k=='token'){if(i.value.trim())o.token=i.value.trim()}else o[k]=i.value.trim()}return o};
  const say=t=>{el.querySelector('[data-p="msg"]').textContent=t};
  el.addEventListener('click',async e=>{const b=e.target.closest('button[data-p]');if(!b||b.dataset.p=='x')return;
-  if(b.dataset.p=='save'){localStorage.setItem(GHK,JSON.stringify(read()));say('Saved.');L('INFO','☁️ GitHub sync settings saved')}
-  else if(b.dataset.p=='forget'){const o=read();delete o.token;localStorage.setItem(GHK,JSON.stringify(o));say('Token removed from this device.');}
-  else if(b.dataset.p=='test'){localStorage.setItem(GHK,JSON.stringify(read()));const c2=ghCfg();if(!ghOk(c2)){say('Owner, repository and token are required.');return}say('Testing…');
+  if(b.dataset.p=='save'){ghSave(read());say('Saved.');L('INFO','☁️ GitHub sync settings saved')}
+  else if(b.dataset.p=='forget'){const o=read();delete o.token;o.remember=false;ghForget();ghSave(o);say('Token removed from this device.');}
+  else if(b.dataset.p=='test'){ghSave(read());const c2=ghCfg();if(!ghOk(c2)){say('Owner, repository and token are required.');return}say('Testing…');
    try{const r=await ghReq(c2,'GET',c2.index||'index.html',null,'application/vnd.github.object');say(r.ok?'✓ Connected · '+(c2.index||'index.html')+' found on '+(c2.branch||'main'):'✗ GitHub answered '+r.status+(r.status==404?' (check owner/repo/branch/file, or the token cannot see this repo)':r.status==401?' (token rejected)':''))}catch(err){say('✗ '+err.message)}}
-  else if(b.dataset.p=='push'){localStorage.setItem(GHK,JSON.stringify(read()));const c2=ghCfg();if(!ghOk(c2)){say('Set owner, repository and token first.');return}
+  else if(b.dataset.p=='push'){ghSave(read());const c2=ghCfg();if(!ghOk(c2)){say('Set owner, repository and token first.');return}
    if(dirty()&&!confirm('You have UNSAVED slider changes. Only saved (live) sliders are baked. Continue?'))return;
    if(!confirm('Commit '+(c2.index||'index.html')+' to '+c2.owner+'/'+c2.repo+' ('+(c2.branch||'main')+') with the current live sliders baked in? Testers get these values on their next load.'))return;
    say('Building…');try{const B=await buildIndex();say('Uploading '+Math.round(B.t.length/1024)+' KB…');const u=await ghPut(c2.index||'index.html',B.t,'Gemgrind: bake balance sliders '+B.stamp);adoptStamp(B.stamp);daily.touch('pushed index.html '+B.stamp);
