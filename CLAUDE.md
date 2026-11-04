@@ -14,20 +14,24 @@ node tools/balance-sim.js                     # balance harness: model every dif
 node tools/balance-sim.js --update-baseline   # accept intended balance changes (commit tools/balance-baseline.json)
 node tools/balance-sim.js --targets=tools/balance-targets.json --strict   # check design targets
 node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-check the service worker
+python3 tools/extract-assets.py            # move any inline base64 image in index.html into assets/ (run after pasting one in)
+python3 tools/extract-assets.py --check    # exit 1 if index.html still contains an inline base64 image
 ```
 
 - **Tests:** there is no gameplay test suite yet. Before pushing:
   - run `node tools/balance-sim.js` (needs Playwright + Chromium). If a change moves balance on purpose, re-run with `--update-baseline` and commit the new baseline in the same commit.
   - smoke-test in a browser with **no flag** and with **`?debug=0`**: no `pageerror`s, a new hero can fight, win and lose, saving survives a reload, and the debug cog is shown by default and hidden with `?debug=0`.
 - **Debug console:** on by default during playtesting. The cog (bottom-left), `` ` `` or F2 toggles the console, which has Autoplay, Auto-Continue, Auto-Retry, QA Simulation, Bug Monitor, 📐 Balance sim and the ⚖️ Balance tab. It stays until final release; for release set `DEBUG_DEFAULT=false`. Use Autoplay + Auto-Continue + Auto-Retry for long regression soaks.
-- **Deploy:** upload `index.html`, `sw.js`, `manifest.webmanifest` and the icons together. `sw.js` is network-first, so online players always get the newest `index.html`. If you add a file that must work offline, add it to `FILES` in `sw.js` and bump `CACHE`.
+- **Deploy:** upload `index.html`, the `assets/` folder, `sw.js`, `manifest.webmanifest` and the icons together. `sw.js` is stale-while-revalidate: the game opens from the cache instantly (also offline), re-checks `index.html` in the background, and when a newer upload is found the page shows "✨ New version ready · tap to reload". It precaches every `assets/…` file that `index.html` references (no list to maintain) and prunes unused ones. Any other new file that must work offline goes in `CORE` in `sw.js`, with `CACHE` bumped.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `index.html` | The entire game: inline CSS, inline JS and inline base64 images (~2.5 MB). |
-| `sw.js` | Offline service worker (network-first, cached fallback). |
+| `index.html` | The entire game: inline CSS and JS (~1.2 MB). Images are files in `assets/`. |
+| `assets/` | Game images (gems, skulls, gathering sprites, backgrounds, touch icon). Content-hash names: a changed image gets a new name, so the service worker can cache them forever. |
+| `tools/extract-assets.py` | Moves inline base64 images out of `index.html` into `assets/` and rewrites the references. |
+| `sw.js` | Service worker: cache-first launch, background update check, update banner, offline play. |
 | `manifest.webmanifest` | PWA manifest (fullscreen, any orientation). |
 | `icon-*.png` | PWA icons. |
 | `AUDIT_REPORT.md` | The latest balance, security and performance audit, with fix diffs. |
@@ -73,7 +77,7 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
 
 ## Code style
 
-- **Match the surrounding code.** It's dense, minified-style ES2020: short names, long single-line functions, semicolons, `const`/`let`, arrow functions, no modules or imports, and no external libraries or fonts (single-file rule).
+- **Match the surrounding code.** It's dense, minified-style ES2020: short names, long single-line functions, semicolons, `const`/`let`, arrow functions, no modules or imports, and no external libraries or fonts. Code and CSS stay in `index.html`; images live in `assets/` (never paste base64 images back in: run `tools/extract-assets.py` if you do).
 - **Tag new work with a version comment:** `/* v6.0.5 · what and why */`. Put new features in their own `<script id="vNNN-…">` layer rather than editing the base engine, unless you are fixing a base bug.
 - **Wrappers:** call the original with `.apply(this,arguments)`, return its result, and put your own code in `try{}catch(e){}` so one layer can't break the others.
 - **Escape everything:** pass any text that came from the save or the player through `esc()` before it goes into `innerHTML`. Use `textContent` for messages (`msg()` already does).
@@ -82,7 +86,8 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
 - **Guard `localStorage`:** wrap every read and write in `try{}catch(e){}`.
 - **Save import:** `migrate()` is the single place that validates loaded or imported values (levels ≤ 9999, forge 0–`FMAX`, potions 0–9999, counts ≥ 0). New persistent numeric fields must be clamped there.
 - **Secrets:** never store tokens in the save or in the settings object. The debug GitHub token is session-only unless the tester ticks "Remember token on this device".
-- **Persistent loops:** no `requestAnimationFrame` loop may run forever. Stop it when its view is hidden, and use a timer for low-frequency checks.
+- **Persistent loops:** no `requestAnimationFrame` loop may run forever. Stop it when its view is hidden, and use a timer for low-frequency checks. Infinite CSS animations on the board must pause while it's covered (`body.home`, `body.v601cov`; see `v606-idle-anim`).
+- **No duplicate `@keyframes` names:** the last definition silently wins. Grep before adding one.
 
 ## Game rules that must hold
 
