@@ -80,7 +80,7 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
 ## Game rules that must hold
 
 **Design rules:**
-- **Defeat never takes anything.** `die()` pays a consolation purse of `PITY = 12.5%` of the node's win XP and gold, and gold, shards, materials and gear are never removed. Don't add penalties.
+- **Defeat never takes anything.** `die()` pays a consolation purse of `PITY = 12.5%` of the node's win XP and gold, weighted by effort: 20% of it for showing up, plus 80% × the share of enemy HP removed (`defeatPity`, audit W3). It is never zero. Gold, shards, materials and gear are never removed. Don't add penalties.
 - **Narration** comes only from the campaign narrator (Deckard-Cain-style voice) in the Story Theater.
 - **One screen, no scrolling.** Every menu and loop fits one screen; only the skill tree and the continent map may scroll. The board is the focal point, the enemy goes in the top banner and the player in the bottom bar.
 - **Look:** dark oak with weathered gold hinges and ornaments; transitions must be snappy.
@@ -103,12 +103,12 @@ node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-ch
 
 **Combat invariants:**
 - **Cascade loop:** at most 80 steps (`guard<80`). Never recurse.
-- **Combo:** `cm = 1 + (combo−1)·(Chain ? 1.5 : 1)` for the player and `1 + (combo−1)·0.5` for the enemy. Each multiplier is applied once per hit.
+- **Combo:** `cm = 1 + (combo−1)·(Chain ? 1.5 : 1)` for the player and `1 + (combo−1)·0.5` for the enemy. A Catalyst+Catalyst wipe is a flat ×5 for the player and ×3 for the enemy (same halved slope, audit W4). Each multiplier is applied once per hit.
 - **Caps:** next-skill `P.cc ≤ 5`, enemy block `≤ 0.9`, dodge `≤ 0.35`, cooldown reduction `≤ 0.3`, Cursed Rocks `≤ 12`.
 - **Board recovery:** `ensure()` runs after every move and tactic. It tries up to 200 shuffles, then regenerates the board, so there is never a no-move state.
 - **Boss enrage:** after player turn `15 + LV('pvt')` (skulls ×2, permanent burn). Tactics fire on enemy turns where `E.tc % 3 == 0`.
 - **4+ match:** gives the player an extra turn (unless the Chain keystone is active). The enemy gets at most 3 chained turns.
-- **Fight transitions:** the next enemy must never be created while `busy` is true. Defer through `pnext` and `settle()`.
-- **No free heals:** a live fight's HP and ailments must not be reset by UI actions (class switch, menus). See audit C1.
+- **Fight transitions:** a combat chain belongs to one enemy. `resolve()` and `swap()` pin it as `E0` and stop as soon as `E !== E0` (a victory screen's Continue can replace `E` mid-cascade; `settle()` then deals the new board). Keep those checks after every `await` in the cascade loop (audit W1).
+- **No free heals:** UI actions (class switch, menus) must never raise the hero's HP fraction. A class switch keeps the HP fraction, and during a live fight also armor, ailments and the Phoenix flag (audit C1).
 
-**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Currently open: C1, W1–W4 and L1–L8.
+**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Fixed: C1, W1, W3, W4. Still open: W2 (needs a balance harness and a design decision) and L1–L8.
