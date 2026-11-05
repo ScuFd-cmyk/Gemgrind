@@ -43,12 +43,12 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
 ## Architecture (`index.html`)
 
 - **Base engine:** the first large `<script>` (~lines 1025–2500). It holds board, combat, economy, rendering and save code.
-- **Feature/version layers:** later `<script id="vNN-js">` / `<style id="vNN-css">` blocks (v38 → v604). Each one **wraps** earlier globals instead of editing them:
-  ```js
-  const _draw=draw;draw=function(){const r=_draw.apply(this,arguments);try{mySync()}catch(e){}return r};
-  ```
-  Later layers run *outside* earlier ones. **The layer merge is complete (v6.1):** outside `debug-tools`, no function is re-wrapped any more. Every extension point is either a hook list or a named layer chain (below), so never write `const _x=fn; fn=function(){…}` again.
-- **Consolidated hook lists (v6.1, ongoing layer merge):** these functions are no longer wrapped. Each runs its base body, then every hook registered for it, in registration (document) order. Never re-wrap them: register a hook in your layer.
+- **Feature/version layers:** later `<script id="vNN-js">` / `<style id="vNN-css">` blocks (v38 → v604). Each adds a feature on top of the base engine. Since the v6.1 layer merge they never re-assign a base function; they attach to it in one of two ways:
+  - a **hook list**, for functions whose extras only run *after* the base, or
+  - a **named layer chain**, for functions whose extras can replace, bracket or re-argue the base.
+
+  Never write `const _x=fn; fn=function(){…}` again (only `debug-tools` still wraps from outside, with its own `wrap()`). A layer's code stays in its own feature block, because it uses that block's private state.
+- **Hook lists:** each function runs its base body, then every registered hook in registration (document) order. Hooks run even when the base body returns early (e.g. `draw()` with no enemy). The runner has no try/catch: wrap your hook body in `try{}catch(e){}` unless an error should stop the hooks after it.
 
   | Function | Base body | Register with | Hook receives |
   |---|---|---|---|
@@ -59,10 +59,18 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
   | `syncBoard()` | `syncBase()` | `onSync(f)` | nothing |
   | `renderCls()` | `clsBase()` | `onCls(f)` | nothing |
 
-  The debug tools' generic `wrap()` (Bug Monitor) still wraps `newEnemy` from outside; that's fine.
-- **Named layer chains (67 functions):** the combat core (`win`, `die`, `hit`, `pdmg`, `foe`, `turnTick`, `roundEnd`, `resolve`, `castP`, `cast`, `restartBattle`, `retreat`, `drop`, `usePot`, `bossTactic`) and every other formerly wrapped function (`newGame`, `migrate`, `pvDraw`, `renderSet`, `act`, `showMenu`, `renderMap`, `fl`, `gear`, `genItem`, `addXp`, `refillGem`, …) have layers that can replace the original (Vault / Challenge victory and defeat), bracket it (`try/finally` flags) or rewrite its arguments, so they are chains, not hook lists. The global function is a dispatcher; the original body is `<name>Base` (for the few `let`/`var` placeholders, such as `renderMap`, `walkTo`, `mapPts` and `refillGem`, the chain is registered right after their declaration). A layer may replace the original entirely (the v3.5 quest map replaces the `renderMap`/`walkTo`/`mapPts` placeholders; v60 replaces `syncDiff`). Add behaviour with `layer('win','vNNN-js', inner => function(){ … inner.apply(this,arguments) … })`: call `inner` exactly once (or deliberately not at all for a mode override), keep `this`/`arguments`, and return its result. Layers compose in document order, innermost first. `GGLayers()` or the debug console's 🧬 Layer map shows every chain. Never re-assign these globals. The runner has no try/catch, so put your hook body in `try{}catch(e){}` unless an error should stop the hooks after it. Hooks run even when the base body returns early (no enemy). The hook code itself stays in its feature layer because it uses that layer's private state.
-- **`debug-tools`:** `<script id="debug-tools" type="text/plain">`. It's inert, and the `debug-loader` after it runs it when debug is on (default during playtesting, `DEBUG_DEFAULT`). While `window.GG_SIM` is set, its hooks pass straight through.
-- **`v606-balance-harness`:** `window.GGBalance.run(opts)` swaps `S`/`E`/`P` and the combat flags for clones, seeds `Math.random`, runs the real `newEnemy()`/`stat()`/`heal()`/`genItem()` synchronously, and restores everything. It must stay read-only: never call `save()`, `draw()` or `win()`/`die()` from it. It lives outside `debug-tools` so the CLI keeps working after release. With debug off, the loader provides a read-only `window.DBAL` so the baked balance profile still applies. Nothing outside the block may *require* debug globals; always check first (`window.logDebugIssue&&…`).
+- **Named layer chains (67 functions):** the combat core (`win`, `die`, `hit`, `pdmg`, `foe`, `turnTick`, `roundEnd`, `resolve`, `castP`, `cast`, `restartBattle`, `retreat`, `drop`, `usePot`, `bossTactic`) and the UI/menu/save/helper functions (`newGame`, `migrate`, `pvDraw`, `renderSet`, `act`, `showMenu`, `renderMap`, `fl`, `gear`, `genItem`, `addXp`, `refillGem`, …).
+  - **Why chains:** their layers can replace the original (Vault/Challenge victory and defeat; the v3.5 quest map over the `renderMap`/`walkTo`/`mapPts` placeholders; v60's `syncDiff`), bracket it (`try/finally` flags) or rewrite its arguments.
+  - **How it works:** the global is a dispatcher, and the original body is `<name>Base`. For the `let`/`var` placeholders (`renderMap`, `walkTo`, `mapPts`, `refillGem`), the chain is registered right after their declaration.
+  - **Adding behaviour:**
+    ```js
+    layer('win','vNNN-js', inner => function(){ const r=inner.apply(this,arguments); try{ /* … */ }catch(e){} return r });
+    ```
+    Call `inner` exactly once (or deliberately not at all, for a mode override), keep `this`/`arguments`, and return its result. Layers compose in document order, innermost first.
+  - **Never re-assign these globals,** and don't store one as a value at startup (e.g. `btn.onclick=showMenu`). Use `()=>showMenu()` so later layers are included.
+  - **Inspecting:** `GGLayers()` or the debug console's 🧬 Layer map shows every chain.
+- **`debug-tools`:** `<script id="debug-tools" type="text/plain">`. It's inert, and the `debug-loader` after it runs it when debug is on (default during playtesting, `DEBUG_DEFAULT`). With debug off, the loader provides a read-only `window.DBAL` so the baked balance profile still applies. Nothing outside the block may *require* debug globals; always check first (`window.logDebugIssue&&…`). While `window.GG_SIM` is set, its hooks pass straight through.
+- **`v606-balance-harness`:** `window.GGBalance.run(opts)` swaps `S`/`E`/`P` and the combat flags for clones, seeds `Math.random`, runs the real `newEnemy()`/`stat()`/`heal()`/`genItem()` synchronously, and restores everything. It must stay read-only: never call `save()`, `draw()` or `win()`/`die()` from it. It lives outside `debug-tools` so the CLI keeps working after release.
 - **Core globals:**
 
   | Global | Holds |
@@ -81,7 +89,7 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
   - `$=id=>document.getElementById(id)`
   - `C()` returns the current class record `S.c[S.cls]`.
   - `D()` returns the difficulty row `DIFF[S.diff]`.
-  - `stat()` returns the derived stat sheet (wrapped by 6 layers; ~4 µs, **don't cache it**).
+  - `stat()` returns the derived stat sheet (`statBase()` plus 5 `onStat` hooks; ~4 µs, **don't cache it**).
   - `LV(k)` returns a research level.
   - `BX(k)` returns a balance multiplier.
 - **Render:** `draw()` → `drawHud()` + `VR[curTab]()` + hooks. `syncBoard()` diffs the tiles. Keep `draw()` free of layout reads; schedule them with `requestAnimationFrame` (see the v60 `fitSoon`).
@@ -92,8 +100,8 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
 ## Code style
 
 - **Match the surrounding code.** It's dense, minified-style ES2020: short names, long single-line functions, semicolons, `const`/`let`, arrow functions, no modules or imports, and no external libraries or fonts. Code and CSS stay in `index.html`; images live in `assets/` (never paste base64 images back in: run `tools/extract-assets.py` if you do).
-- **Tag new work with a version comment:** `/* v6.0.5 · what and why */`. Put new features in their own `<script id="vNNN-…">` layer rather than editing the base engine, unless you are fixing a base bug.
-- **Wrappers:** call the original with `.apply(this,arguments)`, return its result, and put your own code in `try{}catch(e){}` so one layer can't break the others.
+- **Tag new work with a version comment:** `/* v6.1.1 · what and why */`. Put new features in their own `<script id="vNNN-…">` layer rather than editing the base engine, unless you are fixing a base bug.
+- **Extending a function:** register an `onDraw`/`onHud`/`onStat`/`onEnemy`/`onSync`/`onCls` hook or a `layer(...)` (see Architecture). Put your code in `try{}catch(e){}` so one feature can't break the others.
 - **Escape everything:** pass any text that came from the save or the player through `esc()` before it goes into `innerHTML`. Use `textContent` for messages (`msg()` already does).
 - **Don't create elements and listeners on every draw:** build once, then update properties (see the `drawHud` skill bar and its `hudH()` helper). Remove listeners or observers you attach to persistent elements.
 - **No layout reads** (`getBoundingClientRect`, `offsetWidth`, `getComputedStyle`) inside `draw()`, `syncBoard()` or the cascade loop.
