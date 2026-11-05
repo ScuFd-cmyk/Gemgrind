@@ -689,6 +689,9 @@ async function releaseWakeLock(){const s=sentinel;sentinel=null;try{if(s&&!s.rel
 return{requestWakeLock,releaseWakeLock,get active(){return!!(sentinel&&!sentinel.released)},
  status:()=>({supported:supported(),active:!!(sentinel&&!sentinel.released),since:acquiredAt||null,failures:fails,lastError:lastFail||null})}})();
 
+/* v6.1.14 · backing-store density for full-screen effect canvases: at most 2×, and at most ~0.9 megapixels, so a 3× foldable screen
+   is not redrawing / uploading 2.5 MP per canvas per frame for soft glows. Phones keep ~today's sharpness. */
+window.GGDPR=(w,h,cap)=>Math.max(1,Math.min(cap||2,devicePixelRatio||1,Math.sqrt(9e5/Math.max(1,(w||innerWidth)*(h||innerHeight)))));
 window.GGLife=(()=>{const vis=[],rsz=[];let q=0;
 const each=(L,a)=>{for(const f of L){try{f(a)}catch(e){console.error('[Gemgrind] lifecycle handler failed',e)}}};
 /* the wake lock is re-requested synchronously, before any other module reacts to the tab returning */
@@ -1031,7 +1034,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.13';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.14';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -1756,7 +1759,7 @@ function openConBase(k){if(k)conTab=k;if(conTab=='tree')wcen=0;if(conTab=='set')
 function closeConBase(now){const c=$('console');if(!conOpen&&c.hidden)return;conOpen=0;c.classList.remove('open');curTab=mainTab;syncTabBtns();clearTimeout(conT);if(now||RM())c.hidden=true;else conT=setTimeout(()=>{if(!conOpen)c.hidden=true},430)}
 function showTabBase(k){if(CONS.has(k)){openCon(k);return}closeCon(1);curTab=mainTab=k;setFocus(k=='battle');if(k=='map'){mapSc=-1;if(!walking)mapC=(S.at/21)|0}for(const[j]of MAINT)$('v-'+j).hidden=j!=k;syncTabBtns()}
 /* ===== Gemgrind high-resolution rendered gem image library ===== */
-const GG_GEM_ASSETS = {"standard":["assets/gem-a0aead6761.webp","assets/gem-6f2a8028d6.webp","assets/gem-813c3392be.webp","assets/gem-b798c09a1d.webp","assets/gem-56c4f19b34.webp","assets/gem-73d450327d.webp","assets/gem-6b7d367f71.webp"],"attack":["assets/gem-ac51e45adc.webp","assets/gem-4fe9d0550a.webp","assets/gem-32910125dc.webp","assets/gem-19420c7962.webp","assets/gem-67e36bc368.webp","assets/gem-40d395d9f5.webp","assets/gem-ebf741de83.webp"],"four":["assets/gem-75ce60bda4.webp","assets/gem-c6e470295e.webp","assets/gem-bddcdadec4.webp","assets/gem-b5050e7a12.webp","assets/gem-694bbbedf9.webp","assets/gem-36e4db890b.webp","assets/gem-03d24af340.webp"],"ultimate":"assets/gem-50641a6f14.webp"};
+const GG_GEM_ASSETS = {"standard":["assets/gem-78bb04401d.webp","assets/gem-c23d7db1f1.webp","assets/gem-dccbf4edaa.webp","assets/gem-ddeba8d234.webp","assets/gem-a6c6ee738f.webp","assets/gem-f8318c6517.webp","assets/gem-c78d72c922.webp"],"attack":["assets/gem-c96af596fd.webp","assets/gem-47afaac939.webp","assets/gem-8403223b48.webp","assets/gem-26584f32fb.webp","assets/gem-e122136319.webp","assets/gem-5a0ab80389.webp","assets/gem-7236ceb0da.webp"],"four":["assets/gem-63e69c64be.webp","assets/gem-67f254371b.webp","assets/gem-6d1b61513a.webp","assets/gem-90d565a84a.webp","assets/gem-04a98fba9f.webp","assets/gem-c740a56bca.webp","assets/gem-34c7353b32.webp"],"ultimate":"assets/gem-136e55d35c.webp"};
 const GG_GEM_GLOW=['#b51635','#c79a00','#087a3c','#075fc7','#7813a5','#b64a08','#6c91bb'];
 const GG_GEM_IMAGE=(kind,v)=>{const src=kind==='ultimate'?GG_GEM_ASSETS.ultimate:GG_GEM_ASSETS[kind][v];return '<span class="gw gg-image-wrap gg-image-'+kind+' '+(kind==='ultimate'?'gg-ultimate-image':'')+'" style="--gem-glow:'+(GG_GEM_GLOW[v]||'#fff')+'"><img class="gg-art" src="'+src+'" alt="" draggable="false" decoding="async"><svg class="wrp" viewBox="0 0 100 100" aria-hidden="true"></svg></span>';};
 
@@ -1766,7 +1769,7 @@ const GG_GATHER_GLOW=[["#ff8a3d", "#7bd860", "#5ab0ff", "#ff4aa8"], ["#ff4a10", 
 const GG_GATHER_IMG=(a,v)=>{a=Math.max(0,Math.min(4,a|0));const R=GG_GATHER_ASSETS,k={0:0,2:1,3:2,4:3}[v];const src=k!==undefined?R.acts[a][k]:v===1?R.gold:v===5?R.stone:R.bones;const gl=k!==undefined?GG_GATHER_GLOW[a][k]:v===1?'#ffc040':'#8a7a60';return '<span class="gw gg-image-wrap gg-gather-img'+(k===undefined&&v!==1?' gg-gather-junk':'')+'" style="--gem-glow:'+gl+'"><img class="gg-art" src="'+src+'" alt="" draggable="false" decoding="async"><svg class="wrp" viewBox="0 0 100 100" aria-hidden="true"></svg></span>'};
 
 /* ===== v5.6 skull (direct damage) gem: four rendered styles, picked in Settings; 0 keeps the classic coffin rune ===== */
-const GG_SKULL_ASSETS=["assets/skull-5387de70dc.webp","assets/skull-bc3b29d5c1.webp","assets/skull-d22d3cd201.webp","assets/skull-551c343c91.webp"];
+const GG_SKULL_ASSETS=["assets/skull-781bfe4f71.webp","assets/skull-32a0768f6a.webp","assets/skull-c6fea9f2eb.webp","assets/skull-82298ee9e2.webp"];
 const GG_SKULL_NAMES=['Classic coffin rune','Crystal Skull','Obsidian Starburst','Bone Relic','Onyx Coffin'];
 const ggSk6=()=>{const o=S&&S.opt?S.opt.sk6:null;return o==null?2:Math.max(0,Math.min(4,o|0))};
 const GG_SKULL_IMG=k=>'<span class="gw gg-image-wrap gg-image-standard gg-skull-img gg-skull-'+k+'" style="--gem-glow:#7fa6d6"><img class="gg-art" src="'+GG_SKULL_ASSETS[k-1]+'" alt="" draggable="false" decoding="async"><svg class="wrp" viewBox="0 0 100 100" aria-hidden="true"></svg></span>';
@@ -2919,8 +2922,8 @@ return o}
 function seed(ph,a){P=[];const add=(k,n,col)=>{for(let i=0;i<n;i++)P.push(mk(k,col))};
 if(ph==0){add('mist',3,'#d89a5a');add('ember',16,'#ffb35c')}else if(ph==1){add('mist',6,'#8f9cc8');add('fly',7,'#d9ffb0')}else{add('mist',3,'#a04040');add('dust',18,'#ff6a50')}
 if(a=='ash'){add('ember',14,'#ff7a2a');add('soot',12,'#2a2220')}else if(a=='spores'){add('spore',14,'#b6ff3a');add('mist',2,'#7a9a3a')}else if(a=='snow')add('snow',36,'#ffffff');else if(a=='bubbles')add('bub',18,'#9fe8ff');else if(a=='glitch'){add('ash',16,'#c79aff');add('glt',5,'#7af0ff')}else if(a=='sand')add('dust',24,'#e6c27a');else if(a=='wind')add('dust',16,'#e8f0f4');else if(a=='embers')add('ember',12,'#ffd27a');P.sort((p,q)=>(q.k=='mist')-(p.k=='mist'))}
-function size(){const sc=$('mapsc');if(!sc||!cv)return;const w=sc.clientWidth,h=sc.clientHeight,d=Math.min(1.5,devicePixelRatio||1);if(!w||!h)return;/* v6.1.9 · hidden map: keep the canvas (it was dropped to 0 and reallocated on every battle → map → battle travel) */if(w!=W||h!=H||cv.width!=Math.round(w*d)){W=w;H=h;cv.width=Math.round(w*d);cv.height=Math.round(h*d);cv.style.width=w+'px';cv.style.height=h+'px';g.setTransform(d,0,0,d,0,0);for(const p of P){p.x=R()*W;p.y=R()*H}}}
-function stop(){run=0;if(g){g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);const d=Math.min(1.5,devicePixelRatio||1);g.setTransform(d,0,0,d,0,0)}}
+function size(){const sc=$('mapsc');if(!sc||!cv)return;const w=sc.clientWidth,h=sc.clientHeight,d=GGDPR(w,h,1.5);if(!w||!h)return;/* v6.1.9 · hidden map: keep the canvas (it was dropped to 0 and reallocated on every battle → map → battle travel) */if(w!=W||h!=H||cv.width!=Math.round(w*d)){W=w;H=h;cv.width=Math.round(w*d);cv.height=Math.round(h*d);cv.style.width=w+'px';cv.style.height=h+'px';g.setTransform(d,0,0,d,0,0);for(const p of P){p.x=R()*W;p.y=R()*H}}}
+function stop(){run=0;if(g){g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);const d=W&&H?GGDPR(W,H,1.5):1;g.setTransform(d,0,0,d,0,0)}}
 function loop(ts){const v=$('v-map');if(!v||v.hidden||document.hidden||RM()||!cv.isConnected){stop();return}
 if(!last)last=ts;const dt=Math.min(.05,(ts-last)/1000);last=ts;if(++fr%45==0)size();g.clearRect(0,0,W,H);
 for(const p of P){p.t+=dt;p.x+=(p.vx+Math.sin(p.t*1.2+p.sw)*(p.k=='mist'?2:5))*dt;p.y+=p.vy*dt;if(p.k=='fly'&&R()<.02){p.vx=(R()-.5)*14;p.vy=(R()-.5)*14}
@@ -3157,7 +3160,7 @@ const VX=(()=>{let cv=null,g=null,W=0,H=0,D=1,run=0,last=0;const P=[],T=[],SP={}
 const EL={fire:['#fff0b0','#ff8a1a','#ff2a10'],frost:['#ffffff','#bff3ff','#4aa8ff'],storm:['#ffffff','#fff27a','#ffc400'],nature:['#e8ffb0','#5cff8a','#1e9a40'],shadow:['#ffd0ff','#c060ff','#6a14b8'],earth:['#ffe0b0','#ff9a2a','#a8601c'],holy:['#ffffff','#ffe9a0','#ffc44a'],heal:['#f2ffe0','#5cff8a','#1fae4a']};
 const SPIN=new Set(['axe','dagger','hammer','star','orb']),pk=a=>a[(R()*a.length)|0];
 function spr(c){if(SP[c])return SP[c];const k=document.createElement('canvas');k.width=k.height=64;const x=k.getContext('2d'),r=x.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'#ffffff');r.addColorStop(.18,c);r.addColorStop(.5,c+'66');r.addColorStop(1,c+'00');x.fillStyle=r;x.fillRect(0,0,64,64);return SP[c]=k}
-function size(){if(!cv)return;D=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;const pw=Math.round(W*D),ph=Math.round(H*D);/* v6.1.9 · a same-size re-set still wipes and reallocates the canvas */if(cv.width!=pw||cv.height!=ph){cv.width=pw;cv.height=ph}cv.style.width=W+'px';cv.style.height=H+'px'}
+function size(){if(!cv)return;W=innerWidth;H=innerHeight;D=GGDPR(W,H);const pw=Math.round(W*D),ph=Math.round(H*D);/* v6.1.9 · a same-size re-set still wipes and reallocates the canvas */if(cv.width!=pw||cv.height!=ph){cv.width=pw;cv.height=ph}cv.style.width=W+'px';cv.style.height=H+'px'}
 function init(){if(cv)return;cv=document.createElement('canvas');cv.id='vxc';cv.setAttribute('aria-hidden','true');document.body.append(cv);g=cv.getContext('2d')||cv.getContext('2d');size();GGLife.onResize(size);
 if(typeof PJS=='object')for(const t in PJS){const w=t=='bolt'||t=='arrow',i=new Image();i.src='data:image/svg+xml,'+encodeURIComponent(PJS[t].replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" width="'+(w?160:80)+'" height="'+(w?40:80)+'" '));IM[t]=i}}
 function add(o){if(P.length>=MAXP)return;o.vx=o.vx||0;o.vy=o.vy||0;o.ax=o.ax||0;o.ay=o.ay||0;o.dr=o.dr||0;o.r=o.r||0;o.vr=o.vr||0;o.a=o.a==null?1:o.a;o.gr=o.gr||0;o.d=o.d||0;o.m=o.l;P.push(o)}
@@ -3965,7 +3968,7 @@ const LOGS=document.createElement('canvas');LOGS.width=44;LOGS.height=14;{const 
  px(9,6,3,3,'#7a5030');px(32,6,3,3,'#7a5030');px(18,9,2,1,'#ff8a2a');px(24,9,2,1,'#ffb03a');px(21,10,1,1,'#ff5a14')}
 const EM=[],TR=[],PA={x:.3,tx:.3,dir:1,state:'idle',t:1.5,st:1,col:'#ff8a3a',px:0,py:0,pw:0};
 let raf=0,last=0,flick=.7,ft=0,dims=null,wind=0,wt=0;
-function measure(){const w=SCN.clientWidth,h=SCN.clientHeight;if(!w||!h)return null;const d=Math.min(2,devicePixelRatio||1);if(CV.width!=Math.round(w*d)||CV.height!=Math.round(h*d)){CV.width=Math.round(w*d);CV.height=Math.round(h*d)}
+function measure(){const w=SCN.clientWidth,h=SCN.clientHeight;if(!w||!h)return null;const d=GGDPR(w,h);if(CV.width!=Math.round(w*d)||CV.height!=Math.round(h*d)){CV.width=Math.round(w*d);CV.height=Math.round(h*d)}
  const s=Math.max(w/1000,h/600),gy=h-130*s,fx=w/2,fw=Math.max(60,Math.min(190,s*170,w*.3)),pw=Math.max(110,Math.min(300,s*260));PS.style.width=pw+'px';PS.style.height=pw*.8333+'px';return dims={w,h,d,s,gy,fx,fw,pw}}
 new ResizeObserver(()=>{if(homeVis())measure()}).observe(SCN);
 function fireStep(){const y=FH-1;for(let x=0;x<FW;x++){const k=Math.abs(x-FW/2+.5)/(FW*.3);heat[y*FW+x]=k<1?Math.max(0,Math.min(36,Math.round(36*(1-k*k*.75)-R()*6))):0}
@@ -4679,7 +4682,7 @@ addEventListener('keydown',e=>{if(!TUT)return;if(e.key=='Enter'||e.key=='Escape'
 layer('openPM','v49-js',_opm=>function(){if(TUT)return;return _opm.apply(this,arguments)});
 /* canvas spotlight: rgba(0,0,0,.7) tint with a gold-rimmed cut-out around the newly unlocked control */
 let cw=0,ch=0,cd=1;
-function sizeCv(){cd=Math.min(2,devicePixelRatio||1);cw=innerWidth;ch=innerHeight;const pw=Math.round(cw*cd),ph=Math.round(ch*cd);if(CV.width!=pw||CV.height!=ph){CV.width=pw;CV.height=ph}/* v6.1.9 · reallocate only on a real change */if(!G2)OV.classList.add('nocv')}
+function sizeCv(){cw=innerWidth;ch=innerHeight;cd=GGDPR(cw,ch);const pw=Math.round(cw*cd),ph=Math.round(ch*cd);if(CV.width!=pw||CV.height!=ph){CV.width=pw;CV.height=ph}/* v6.1.9 · reallocate only on a real change */if(!G2)OV.classList.add('nocv')}
 function targetRect(){const el=TUT&&TUT.target&&TUT.target();if(!el||!el.isConnected)return null;const r=el.getBoundingClientRect();if(r.width<2||r.height<2||r.bottom<0||r.top>ch)return null;
  for(let p=el;p;p=p.parentElement)if(p.hidden)return null;return r}
 function placeBox(){const r=targetRect(),h=BOX.offsetHeight||300;let top;if(r){const below=r.bottom+18,above=r.top-18-h;top=r.top+r.height/2>ch/2?Math.max(12,above):Math.min(ch-h-12,below)}else top=Math.max(12,(ch-h)/2);BOX.style.top=top+'px'}
@@ -5713,7 +5716,7 @@ function vib(p){if(!O('vib'))return;try{if(typeof navigator.vibrate=='function')
 
 /* ---------- juice canvas: capped, rAF-driven, sleeps when empty ---------- */
 const MAXJ=260,JP=[],SPR={};let cv=null,g=null,W=0,H=0,DP=1,run=0,last=0,tsc=1,frz=0;
-function size(){if(!cv)return;DP=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;const pw=Math.round(W*DP),ph=Math.round(H*DP);/* v6.1.9 · reallocate only on a real change */if(cv.width!=pw||cv.height!=ph){cv.width=pw;cv.height=ph}cv.style.width=W+'px';cv.style.height=H+'px'}
+function size(){if(!cv)return;W=innerWidth;H=innerHeight;DP=GGDPR(W,H);const pw=Math.round(W*DP),ph=Math.round(H*DP);/* v6.1.9 · reallocate only on a real change */if(cv.width!=pw||cv.height!=ph){cv.width=pw;cv.height=ph}cv.style.width=W+'px';cv.style.height=H+'px'}
 function init(){if(cv)return;cv=document.createElement('canvas');cv.id='jxc';cv.setAttribute('aria-hidden','true');document.body.append(cv);g=cv.getContext('2d');size();try{GGLife.onResize(size)}catch(e){addEventListener('resize',size)}}
 function spr(c){if(SPR[c])return SPR[c];const k=document.createElement('canvas');k.width=k.height=48;const x=k.getContext('2d'),r=x.createRadialGradient(24,24,0,24,24,24);r.addColorStop(0,'#ffffff');r.addColorStop(.2,c);r.addColorStop(.55,c+'55');r.addColorStop(1,c+'00');x.fillStyle=r;x.fillRect(0,0,48,48);return SPR[c]=k}
 function add(o){if(JP.length>=MAXJ)return null;o.vx=o.vx||0;o.vy=o.vy||0;o.ay=o.ay||0;o.d=o.d||0;o.a=o.a==null?1:o.a;o.m=o.l;JP.push(o);return o}
@@ -7184,6 +7187,17 @@ body.v53pp .g.g.w53p .gw.gg-image-wrap .gg-art{filter:drop-shadow(0 0 1px #d7ffb
 .g.g.w53r .gw.gg-image-wrap .gg-art{filter:sepia(.35) drop-shadow(0 0 1px #e8d2a0) drop-shadow(0 0 3px #a0702a)!important}
 /* frozen wins over the other glows: it changes how the tile plays */
 .g.fz:not(#_) .gw.gg-image-wrap .gg-art{filter:saturate(.45) brightness(1.18) drop-shadow(0 0 1px #f2fbff) drop-shadow(0 0 1px #f2fbff) drop-shadow(0 0 3px #7dd3fc)!important}
+</style>
+<style id="v6114-gem-crop">
+/* v6.1.14 · the crystal / skull images were 512 px with ~2/3 transparent padding, shown at transform:scale(2.48) and so on.
+   Every one of the 49 tile layers then reserved GPU memory for the whole scaled-up transparent square (~2× the tile, ~44 MB at
+   3× DPR). The images are now cropped to a centred square that still holds every visible pixel, and the scale shrinks by the
+   same factor, so each gem looks exactly as before. New scale = old scale × crop / 512. */
+.g .gg-art{transform:scale(.9106)}
+.g .gg-image-attack .gg-art{transform:scale(.9606)}
+.g .gg-image-four .gg-art{transform:scale(1.1402,.9598)}
+.g .gg-image-ultimate .gg-art{transform:scale(.8845)}
+.g .gg-skull-img .gg-art{transform:scale(1.3175)}
 </style>
 <style id="v606-update-toast">
 /* v6.0.6 · "new version ready" banner (efficiency #8) */
