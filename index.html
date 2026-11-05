@@ -1028,7 +1028,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.1';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.2';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -7170,7 +7170,12 @@ body.home .gw.gg-image-wrap,body.v601cov .gw.gg-image-wrap{animation-play-state:
    CLI: node tools/balance-sim.js   ·   debug console: 📐 Balance sim
    ===================================================================== */
 window.GGBalance=(()=>{
-const DEF={diffs:[0,1,2,3,4],nodes:'sample',build:'bare',cls:'Warrior',skulls:3,combo:1.3,enemyCombo:1.2,gearRarity:2,seed:7,ng:0};
+/* v6.1.2 · calibrated from real play (QA export 2026-11-04, v6.1.1: Warrior on Grindmaster, nodes 0–11, 41 guardian fights; enemy HP
+   matched the game exactly). skulls / enemySkulls are effective skull matches per turn (they also absorb skills, specials and cascades);
+   sustain multiplies the hero's HP + armor pool for mid-fight heals, armor skills and potions (losses absorbed a median 1.16× the pool).
+   With these values those fights read as power needed ×1.19 (real: 27% guardian wins) and a C1 city fight as ×0.34 (real: 100% wins).
+   Re-fit as more exports arrive (other classes, difficulties and later continents). levels: optional {node: heroLevel} override. */
+const DEF={diffs:[0,1,2,3,4],nodes:'sample',build:'bare',cls:'Warrior',skulls:.94,enemySkulls:1.16,sustain:1.16,combo:1.3,enemyCombo:1.2,gearRarity:2,seed:7,ng:0,levels:null};
 const prng=s=>{s=(s|0)%2147483646+1;return()=>(s=(s*16807)%2147483647)/2147483647};
 const clone=o=>JSON.parse(JSON.stringify(o));
 /* hero level on arrival at each node's first city fight (reg) and at its guardian (boss): XP from the required fights only.
@@ -7192,8 +7197,8 @@ function fight(di,n,L,o,R){const w=node(n.i);S.diff=di;if(S.ng)S.ng.t=di==4?(o.n
  newEnemy();heal();
  const st=stat(),d=D(),enrAt=15+LV('pvt'),crit=1+Math.min(1,st.crit||0)*(1.75*BX('crit')-1);
  const pT=st.atk*.8*o.skulls*o.combo*st.skd*d.sk*(st.ks.splash?1.25:1)*BX('skull_p')*st.dmg*crit*BX('all_p')*(1-eBlock());
- const eT=st.ks.iron?0:E.at*.6*o.skulls*o.enemyCombo*d.sk*BX('skull_e')*d.ed*BX('all_e')*(1-Math.min(.35,st.dodge||0));
- const eHP=E.mx+Math.max(0,E.arm||0),pool0=Math.max(1,P.hp)+Math.max(0,P.arm),ttk=Math.ceil(eHP/Math.max(1e-9,pT));
+ const eT=st.ks.iron?0:E.at*.6*(o.enemySkulls==null?o.skulls:o.enemySkulls)*o.enemyCombo*d.sk*BX('skull_e')*d.ed*BX('all_e')*(1-Math.min(.35,st.dodge||0));
+ const eHP=E.mx+Math.max(0,E.arm||0),pool0=(Math.max(1,P.hp)+Math.max(0,P.arm))*(o.sustain||1),ttk=Math.ceil(eHP/Math.max(1e-9,pT));
  let t=0,pool=pool0;if(eT>0){while(pool>0&&t<9999){t++;pool-=eT*(E.boss&&t>enrAt?2:1)}}else t=9999;
  const y=GG41.baseYield(),xp=Math.round(y.x*GG41.rewardMul(E.cmod||1)*(y.xm||1));
  return{diff:d.n,node:n.i,cont:w.ci+1,city:w.j>=20?'Sanctum':w.j+1,fight:n.boss?(w.B?'continent guardian':'city guardian'):'city fight',
@@ -7207,7 +7212,7 @@ function run(opts){const o=Object.assign({},DEF,opts||{});
  const keep={S,E,P,busy,bq,dead,GT,MR:Math.random},rows=[],R=prng(o.seed),t0=performance.now();
  try{window.GG_SIM=1;busy=true;GT=null;dead=false;Math.random=R;const base=clone(S);
   for(const di of o.diffs){S=prep(base,o);P=clone(keep.P);const cur=o.build=='bare'?levelCurve(di):null;
-   for(const n of pickNodes(o.nodes)){const L=cur?(n.boss?cur[n.i].boss:cur[n.i].reg):C().l;rows.push(fight(di,n,L,o,R))}}}
+   for(const n of pickNodes(o.nodes)){const L=o.levels&&o.levels[n.i]?o.levels[n.i]:cur?(n.boss?cur[n.i].boss:cur[n.i].reg):C().l;rows.push(fight(di,n,L,o,R))}}}
  finally{S=keep.S;E=keep.E;P=keep.P;busy=keep.busy;bq=keep.bq;dead=keep.dead;GT=keep.GT;Math.random=keep.MR;window.GG_SIM=0}
  const res={opts:o,ms:Math.round(performance.now()-t0),rows,summary:summary(rows)};api.last=res;return res}
 /* per difficulty: where the model first loses a guardian / first needs more than enrage allows, and the peak power needed */
@@ -7447,7 +7452,7 @@ const _wi=win;win=function(){const was=!!(E&&E.dead),boss=E&&E.boss,nm=E&&E.n,r=
 let seen=0;setInterval(()=>{const q=window.AutoplayEngine&&AutoplayEngine.QA;if(!q)return;const ring=q.log(),tot=q.actions;if(!ring.length)return;
  const last=ring[ring.length-1];if(last===seen)return;const i=ring.lastIndexOf(seen);for(const line of ring.slice(i+1)){const t=line.replace(/^.*?\s{2}/,'');L(/Bag full|missed/i.test(t)?'WARNING':'QA',t)}seen=last;void tot},500);
 /* stalled bot watchdog: Autoplay on, battle live, no moves for 20 s */
-let lm=-1,lt=Date.now();setInterval(()=>{const a=window.AutoplayEngine;if(!a||!a.on){lm=-1;return}if(a.moves!=lm){lm=a.moves;lt=Date.now();return}
+let lm=-1,lt=Date.now();setInterval(()=>{const a=window.AutoplayEngine;if(!a||!a.on){lm=-1;return}if(document.hidden){lt=Date.now();return}/* v6.1.2 · hidden time doesn't count as a stall */if(a.moves!=lm){lm=a.moves;lt=Date.now();return}
  if(Date.now()-lt>20000&&curTab=='battle'&&isBattleActive&&!busy&&!sty&&!dead&&lim('stall',20000))L('GLITCH','Autoplay stalled: no moves in 20 s on the battle screen (busy='+busy+', paused='+PAUSED+')')},2000);
 L('INFO','Session started · '+(S.hero?S.hero.name+', '+S.cls+' Lv '+C().l:'no hero yet'));})();
 /* ---------- v5.7g BUG MONITOR · visual / flashing / gameplay watchdog ----------
@@ -7520,7 +7525,12 @@ function layout(){if(document.hidden)return;
 
 /* ===== GAMEPLAY · board integrity, stat sanity, soft-locks ===== */
 let busySince=0,emptyHits=0,zeroSince=0,sig='',sigT=0,negN=0;
-function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S||!S.hero)return;const now=Date.now();
+/* v6.1.2 · hidden time is not stall time. While the app is hidden (screen off, app switch, notification shade) Android pauses
+   animation frames, so an enemy skill projectile or a cascade simply waits: that read as a 60 s "SOFT-LOCK" in QA exports.
+   The soft-lock / slow-turn / stutter clocks now pause while hidden and restart on return, and the gap is logged instead. */
+let hidT=0;try{GGLife.onVisibility(h=>{try{if(h){if(!hidT){hidT=Date.now();if(on)L('INFO','📴 Game hidden (screen off or app switched)')}}
+ else{const g=hidT?Math.round((Date.now()-hidT)/1000):0;hidT=0;busySince=0;sigT=0;fT=0;fN=0;fBad=0;fWorst=0;fWin=performance.now();if(on)L('INFO','📱 Game visible again after '+g+' s · stall and stutter clocks restarted')}}catch(_){}})}catch(_){}
+function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S||!S.hero)return;if(document.hidden){busySince=0;sigT=0;return}const now=Date.now();
  if(s.busy&&!PAUSED){const tb=document.getElementById('turnb'),g=s.B.join('')+'|'+Math.round(s.E?s.E.hp:0)+'|'+Math.round(s.P?s.P.hp:0)+'|'+(tb&&!tb.hidden?tb.textContent:'')+'|'+document.querySelectorAll('#board .g').length;
   if(!busySince){busySince=now;sig=g;sigT=now}if(g!=sig){sig=g;sigT=now}
   /* real soft-lock: input blocked AND nothing on the board, HP bars or turn banner has changed */

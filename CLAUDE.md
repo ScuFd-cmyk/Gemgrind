@@ -13,6 +13,7 @@ python3 -m http.server 8765                      # serve the repo root
 node tools/balance-sim.js                     # balance harness: model every difficulty × continent, fail on drift vs the baseline
 node tools/balance-sim.js --update-baseline   # accept intended balance changes (commit tools/balance-baseline.json)
 node tools/balance-sim.js --targets=tools/balance-targets.json --strict   # check design targets
+# model defaults are calibrated from real QA exports (skulls 0.94 / enemySkulls 1.16 / sustain 1.16, see AUDIT_REPORT W2); override with --skulls --enemySkulls --sustain
 node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-check the service worker
 python3 tools/extract-assets.py            # move any inline base64 image in index.html into assets/ (run after pasting one in)
 python3 tools/extract-assets.py --check    # exit 1 if index.html still contains an inline base64 image
