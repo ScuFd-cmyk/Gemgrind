@@ -1031,7 +1031,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.9';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.10';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -7159,6 +7159,13 @@ layer('cast','v604-skills',_cast=>async function(k,who){
 /* v6.0.6 · efficiency #9: the 49 floating gem sprites (gg-image-float on two drop-shadow layers) keep animating behind the
    campfire home screen and behind the full-screen console. Pause them while the board is covered. */
 body.home .gw.gg-image-wrap,body.v601cov .gw.gg-image-wrap{animation-play-state:paused}
+</style>
+<style id="v6110-home-cover">
+/* v6.1.10 · the camp screen covers the battle view completely, but the battle view kept painting and animating underneath it
+   (enemy / hero portraits, banner glows, board, hazard layer). Those composited animations forced every element of the camp
+   screen above them into its own full-screen GPU layer (~200 MB at 2.6×). On the Galaxy Fold inner screen Chrome ran out of
+   GPU memory and left parts of the camp scene unpainted. Same fix the console already uses (v601cov): stop painting it. */
+body.home #app{visibility:hidden!important}
 </style>
 <style id="v606-update-toast">
 /* v6.0.6 · "new version ready" banner (efficiency #8) */
