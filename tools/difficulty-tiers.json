@@ -1,0 +1,307 @@
+{
+  "generator": "tools/difficulty-tiers.ts",
+  "formula": "V(L) = V(L_b) * (1 + g_band)^(L - L_b), continuous at band edges",
+  "growth": {
+    "enemy_hp_multiplier": {
+      "base": 0.6,
+      "A": 0.12,
+      "B": 0.18,
+      "C": 0.3,
+      "floor": null,
+      "cap": null
+    },
+    "skull_damage_multiplier": {
+      "base": 0.9,
+      "A": 0.05,
+      "B": 0.12,
+      "C": 0.2,
+      "floor": null,
+      "cap": null
+    },
+    "turn_to_enraged": {
+      "base": 15,
+      "A": -0.01,
+      "B": -0.04,
+      "C": -0.08,
+      "floor": 8,
+      "cap": null
+    },
+    "status_ailment_chance": {
+      "base": 0.05,
+      "A": 0.2,
+      "B": 0.21,
+      "C": 0.24,
+      "floor": null,
+      "cap": 0.75
+    },
+    "resource_gain_modifier": {
+      "base": 1,
+      "A": -0.02,
+      "B": -0.05,
+      "C": -0.12,
+      "floor": 0.4,
+      "cap": null
+    }
+  },
+  "tiers": [
+    {
+      "tier": 1,
+      "name": "Pilgrim",
+      "band": "A · Casual/Story",
+      "enemy_hp_multiplier": 0.6,
+      "skull_damage_multiplier": 0.9,
+      "turn_to_enraged": 15,
+      "status_ailment_chance": 0.05,
+      "resource_gain_modifier": 1,
+      "diagnostics": {
+        "kill_window_index": 1,
+        "threat_index": 1,
+        "reward_per_hp_index": 1,
+        "clamped": []
+      },
+      "Design_Intent": "Onboarding. Enemies die well inside the 15-turn window to any legal swap; tests only that the player understands swapping, colour→mana and that skulls are the threat. Ailments are rare enough to be read as a tutorial event."
+    },
+    {
+      "tier": 2,
+      "name": "Wanderer",
+      "band": "A · Casual/Story",
+      "enemy_hp_multiplier": 0.67,
+      "skull_damage_multiplier": 0.95,
+      "turn_to_enraged": 15,
+      "status_ailment_chance": 0.06,
+      "resource_gain_modifier": 0.98,
+      "diagnostics": {
+        "kill_window_index": 1.12,
+        "threat_index": 1.07,
+        "reward_per_hp_index": 0.878,
+        "clamped": []
+      },
+      "Design_Intent": "Line shape. Rewards making 4-in-a-row for the extra turn over the first match seen; a player who never chains still wins, one who does wins in about half the turns."
+    },
+    {
+      "tier": 3,
+      "name": "Apprentice",
+      "band": "A · Casual/Story",
+      "enemy_hp_multiplier": 0.75,
+      "skull_damage_multiplier": 0.99,
+      "turn_to_enraged": 15,
+      "status_ailment_chance": 0.072,
+      "resource_gain_modifier": 0.96,
+      "diagnostics": {
+        "kill_window_index": 1.25,
+        "threat_index": 1.12,
+        "reward_per_hp_index": 0.768,
+        "clamped": []
+      },
+      "Design_Intent": "Skull triage. Skull damage reaches 1x, so the test is denying enemy skull matches (clearing skull lines before they fall to the enemy) rather than pure damage racing."
+    },
+    {
+      "tier": 4,
+      "name": "Journeyman",
+      "band": "A · Casual/Story",
+      "enemy_hp_multiplier": 0.84,
+      "skull_damage_multiplier": 1.04,
+      "turn_to_enraged": 15,
+      "status_ailment_chance": 0.086,
+      "resource_gain_modifier": 0.941,
+      "diagnostics": {
+        "kill_window_index": 1.4,
+        "threat_index": 1.2,
+        "reward_per_hp_index": 0.672,
+        "clamped": []
+      },
+      "Design_Intent": "First skill rotation. HP outgrows raw matching; the player must spend mana on a skill every few turns instead of hoarding, and first sees enrage as a real deadline on bosses."
+    },
+    {
+      "tier": 5,
+      "name": "Adept",
+      "band": "A · Casual/Story",
+      "enemy_hp_multiplier": 0.94,
+      "skull_damage_multiplier": 1.09,
+      "turn_to_enraged": 14,
+      "status_ailment_chance": 0.104,
+      "resource_gain_modifier": 0.922,
+      "diagnostics": {
+        "kill_window_index": 1.68,
+        "threat_index": 1.27,
+        "reward_per_hp_index": 0.589,
+        "clamped": []
+      },
+      "Design_Intent": "Normal baseline (≈ the current Normal row). Boss tactics on every third enemy turn now cost real HP; tests reading the board after a reshape and planning potions for guardians."
+    },
+    {
+      "tier": 6,
+      "name": "Tactician",
+      "band": "B · Optimized",
+      "enemy_hp_multiplier": 1.11,
+      "skull_damage_multiplier": 1.23,
+      "turn_to_enraged": 14,
+      "status_ailment_chance": 0.125,
+      "resource_gain_modifier": 0.876,
+      "diagnostics": {
+        "kill_window_index": 1.98,
+        "threat_index": 1.46,
+        "reward_per_hp_index": 0.474,
+        "clamped": []
+      },
+      "Design_Intent": "Cascade awareness. The kill window shrinks while HP compounds at 18%/tier: the player must favour low-board matches that drop new lines (combo multiplier) over top-board safe moves."
+    },
+    {
+      "tier": 7,
+      "name": "Strategist",
+      "band": "B · Optimized",
+      "enemy_hp_multiplier": 1.31,
+      "skull_damage_multiplier": 1.37,
+      "turn_to_enraged": 13,
+      "status_ailment_chance": 0.152,
+      "resource_gain_modifier": 0.832,
+      "diagnostics": {
+        "kill_window_index": 2.52,
+        "threat_index": 1.67,
+        "reward_per_hp_index": 0.381,
+        "clamped": []
+      },
+      "Design_Intent": "Ailment management. ~15% of Elite/Boss actions carry Burning/Poison/Freeze; tests cleansing or out-racing damage-over-time and not wasting a frozen turn window."
+    },
+    {
+      "tier": 8,
+      "name": "Veteran",
+      "band": "B · Optimized",
+      "enemy_hp_multiplier": 1.55,
+      "skull_damage_multiplier": 1.54,
+      "turn_to_enraged": 13,
+      "status_ailment_chance": 0.184,
+      "resource_gain_modifier": 0.791,
+      "diagnostics": {
+        "kill_window_index": 2.98,
+        "threat_index": 1.93,
+        "reward_per_hp_index": 0.306,
+        "clamped": []
+      },
+      "Design_Intent": "Mana efficiency (past Hard: ~1.5x HP and skulls). Every skill cast must be timed to a full board state; tests banking mana toward one burst into an enemy vulnerability rather than casting on cooldown."
+    },
+    {
+      "tier": 9,
+      "name": "Warden",
+      "band": "B · Optimized",
+      "enemy_hp_multiplier": 1.83,
+      "skull_damage_multiplier": 1.72,
+      "turn_to_enraged": 12,
+      "status_ailment_chance": 0.222,
+      "resource_gain_modifier": 0.751,
+      "diagnostics": {
+        "kill_window_index": 3.81,
+        "threat_index": 2.22,
+        "reward_per_hp_index": 0.246,
+        "clamped": []
+      },
+      "Design_Intent": "Gear & research check. Raw HP at ~1.8x with 12 turns to enrage means un-upgraded gear fails mathematically; tests whether the player has invested in forge and research instead of pushing."
+    },
+    {
+      "tier": 10,
+      "name": "Champion",
+      "band": "B · Optimized",
+      "enemy_hp_multiplier": 2.16,
+      "skull_damage_multiplier": 1.93,
+      "turn_to_enraged": 12,
+      "status_ailment_chance": 0.269,
+      "resource_gain_modifier": 0.714,
+      "diagnostics": {
+        "kill_window_index": 4.5,
+        "threat_index": 2.59,
+        "reward_per_hp_index": 0.198,
+        "clamped": []
+      },
+      "Design_Intent": "Optimized ceiling (above Grindmaster: ~2.2x HP, ~1.9x skulls). Requires a deliberate opener: set up a 4+/Catalyst on turn 1–3, sustain combos ≥3 on average, and finish before enrage at 12."
+    },
+    {
+      "tier": 11,
+      "name": "Scourge",
+      "band": "C · Masochist/Endgame",
+      "enemy_hp_multiplier": 2.81,
+      "skull_damage_multiplier": 2.31,
+      "turn_to_enraged": 11,
+      "status_ailment_chance": 0.333,
+      "resource_gain_modifier": 0.628,
+      "diagnostics": {
+        "kill_window_index": 6.39,
+        "threat_index": 3.26,
+        "reward_per_hp_index": 0.134,
+        "clamped": []
+      },
+      "Design_Intent": "Mega-combo entry. HP growth jumps to 30%/tier; average play no longer clears before enrage. Tests engineering cascades ≥5 and chaining extra turns, not finding them by luck."
+    },
+    {
+      "tier": 12,
+      "name": "Torment",
+      "band": "C · Masochist/Endgame",
+      "enemy_hp_multiplier": 3.65,
+      "skull_damage_multiplier": 2.78,
+      "turn_to_enraged": 10,
+      "status_ailment_chance": 0.413,
+      "resource_gain_modifier": 0.553,
+      "diagnostics": {
+        "kill_window_index": 9.13,
+        "threat_index": 4.16,
+        "reward_per_hp_index": 0.091,
+        "clamped": []
+      },
+      "Design_Intent": "Enrage is assumed. The window (~10 turns) is shorter than a clean kill for most builds; tests surviving post-enrage skulls ×2 + scorch with shields, cleanses and heal timing."
+    },
+    {
+      "tier": 13,
+      "name": "Abyssal",
+      "band": "C · Masochist/Endgame",
+      "enemy_hp_multiplier": 4.75,
+      "skull_damage_multiplier": 3.33,
+      "turn_to_enraged": 9,
+      "status_ailment_chance": 0.513,
+      "resource_gain_modifier": 0.486,
+      "diagnostics": {
+        "kill_window_index": 13.19,
+        "threat_index": 5.33,
+        "reward_per_hp_index": 0.061,
+        "clamped": []
+      },
+      "Design_Intent": "Status saturation. Over half of Elite/Boss actions inflict an ailment; tests build choice (resistances, cleanse skills) as much as board play — the wrong loadout cannot win."
+    },
+    {
+      "tier": 14,
+      "name": "Oblivion",
+      "band": "C · Masochist/Endgame",
+      "enemy_hp_multiplier": 6.17,
+      "skull_damage_multiplier": 4,
+      "turn_to_enraged": 8,
+      "status_ailment_chance": 0.636,
+      "resource_gain_modifier": 0.428,
+      "diagnostics": {
+        "kill_window_index": 19.28,
+        "threat_index": 6.92,
+        "reward_per_hp_index": 0.042,
+        "clamped": []
+      },
+      "Design_Intent": "Near-perfect execution. 8 turns to enrage, ~6.2x HP, 4x skulls and ~64% ailments; every turn must either set up or cash in a mega-combo. One wasted move is usually the fight."
+    },
+    {
+      "tier": 15,
+      "name": "Endless Grind",
+      "band": "C · Masochist/Endgame",
+      "enemy_hp_multiplier": 8.02,
+      "skull_damage_multiplier": 4.8,
+      "turn_to_enraged": 8,
+      "status_ailment_chance": 0.75,
+      "resource_gain_modifier": 0.4,
+      "diagnostics": {
+        "kill_window_index": 25.06,
+        "threat_index": 8.89,
+        "reward_per_hp_index": 0.03,
+        "clamped": [
+          "turn_to_enraged",
+          "status_ailment_chance",
+          "resource_gain_modifier"
+        ]
+      },
+      "Design_Intent": "Masochist ceiling. Enrage at the 8-turn floor, ~8x HP, ~4.8x skulls, ailments at the 0.75 cap, rewards at the 0.4x floor: solvable only with a min-maxed build plus Catalyst wipes and long cascades. A prestige tier, not a farming tier."
+    }
+  ]
+}
