@@ -14,6 +14,7 @@ node tools/balance-sim.js                     # balance harness: model every dif
 node tools/balance-sim.js --update-baseline   # accept intended balance changes (commit tools/balance-baseline.json)
 node tools/balance-sim.js --targets=tools/balance-targets.json --strict   # check design targets
 # model defaults are calibrated from real QA exports (skulls 0.94 / enemySkulls 1.16 / sustain 1.16, see AUDIT_REPORT W2); override with --skulls --enemySkulls --sustain
+node tools/skill-probe.js                     # cast every skill × skill level × campaign stage through the real cast(); report power vs skulls, the harness and guardian HP (--json=out.json, --diff=0..4)
 node -e "new Function(require('fs').readFileSync('sw.js','utf8'))"   # syntax-check the service worker
 python3 tools/extract-assets.py            # move any inline base64 image in index.html into assets/ (run after pasting one in)
 python3 tools/extract-assets.py --check    # exit 1 if index.html still contains an inline base64 image
@@ -39,6 +40,7 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
 | `AUDIT_REPORT.md` | The latest balance, security and performance audit, with fix diffs. |
 | `tools/balance-sim.js` | Balance harness CLI (Node + Playwright). Drives `window.GGBalance` in the real page. |
 | `tools/balance-baseline.json` | Recorded harness output, one fight per line; the drift check compares against it. |
+| `tools/skill-probe.js` | Skill power probe (Node + Playwright): every class's skills through the real `cast()` chain, plus cascade frequency for the next-skill multiplier. |
 | `tools/balance-targets.example.json` | Template for design targets (placeholder numbers). |
 
 ## Architecture (`index.html`)
