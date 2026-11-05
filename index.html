@@ -1031,7 +1031,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.12';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.13';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -7540,9 +7540,18 @@ function sampleCanvases(){if(document.hidden)return;for(const cv of document.que
 
 /* ===== VISUAL 3 · frame pacing: dropped frames, stutter bursts, low FPS ===== */
 let fT=0,fN=0,fBad=0,fWorst=0,fWin=performance.now(),lowRun=0;
+/* v6.1.13 · say why frames starved: were JS timers on time (then the browser / system stopped drawing, not the game),
+   did the window lose focus (system overlay, screenshot toolbar, notification shade), full screen, size, animations, last action */
+let tLate=0,tPrev=performance.now(),blurAt=0,fsAt=0;setInterval(()=>{const n=performance.now(),l=n-tPrev-250;if(l>tLate)tLate=l;tPrev=n},250);
+addEventListener('blur',()=>{blurAt=Date.now()});document.addEventListener('fullscreenchange',()=>{fsAt=Date.now()});
+function lowCtx(){try{const now=Date.now(),an=document.getAnimations?document.getAnimations().length:-1,cr=window.QARec&&QARec.crumbs?QARec.crumbs.slice(-1)[0]:'';
+ const why=tLate<150?'JS timers on time (max '+Math.round(tLate)+' ms late) → the browser/system stopped drawing, not game code':'JS timers up to '+Math.round(tLate)+' ms late → main thread busy';
+ const o=' · '+why+(document.hasFocus()?'':' · window NOT focused')+(blurAt&&now-blurAt<8000?' · focus lost '+((now-blurAt)/1000).toFixed(1)+' s ago (system overlay / screenshot / shade?)':'')+
+  (fsAt&&now-fsAt<8000?' · full screen toggled '+((now-fsAt)/1000).toFixed(1)+' s ago':'')+' · '+(document.fullscreenElement?'fullscreen':'not fullscreen')+' · '+innerWidth+'×'+innerHeight+'@'+devicePixelRatio+
+  ' · '+an+' animations · speed ×'+(typeof SPD=='function'?SPD():1)+(cr?' · last: '+String(cr).slice(0,60):'');tLate=0;return o}catch(_){return''}}
 function frame(t){if(!on)return;if(fT){const dt=t-fT;fN++;if(dt>100)fBad++;if(dt>fWorst)fWorst=dt}fT=t;
  if(t-fWin>=2000){const fps=fN*1000/(t-fWin);if(!document.hidden){if(fps<30)lowRun++;else lowRun=0;
-   if(lowRun>=2)rep('fps','PERFORMANCE','Low frame rate: '+fps.toFixed(0)+' fps for '+lowRun*2+' s',20000);
+   if(lowRun>=2)rep('fps','PERFORMANCE','Low frame rate: '+fps.toFixed(0)+' fps for '+lowRun*2+' s'+lowCtx(),20000);
    if(fBad>=4)rep('jank','VISUAL','STUTTER: '+fBad+' frames over 100 ms in 2 s (worst '+Math.round(fWorst)+' ms), reads as flicker on screen',15000)}
   fN=0;fBad=0;fWorst=0;fWin=t}raf=requestAnimationFrame(frame)}
 
