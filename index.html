@@ -1028,7 +1028,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.5';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.6';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -3252,11 +3252,16 @@ function place(o){const w=o.inner.clientWidth+o.gap;o.inner.style.transform=o.p?
 function paint(o){const sig=o.n+':'+o.p;if(sig==o.sig)return;o.sig=sig;o.bar.hidden=o.n<2;if(o.n<2)return;
 o.bar.querySelector('.pgd').innerHTML=Array.from({length:o.n},(_,i)=>'<i data-i="'+i+'"'+(i==o.p?' class="on"':'')+'></i>').join('');o.bar.querySelector('.pgn').textContent=(o.p+1)+' / '+o.n;
 const[a,b]=o.bar.querySelectorAll('[data-pg]');a.disabled=o.p<=0;b.disabled=o.p>=o.n-1}
-function measure(o){const h=o.host;if(!h.isConnected||!h.offsetParent||h.closest('[hidden]'))return;if(o.pre)o.pre(o);const I=o.inner,w=I.clientWidth;if(!w||!I.clientHeight)return;
+function measure(o){const h=o.host;if(!h.isConnected||!h.offsetParent||h.closest('[hidden]'))return;if(o.pre)o.pre(o);const I=o.inner;
+/* v6.1.6 · iOS WebKit lays a flex-sized multicol box out as if its height were open, so the columns stacked down and were clipped
+   (hero inventory showed no pager on iPhone). Pin the flex-given height in px so the columns overflow sideways in every engine. */
+if(o.fix){I.style.height='';I.style.flex='';const ah=I.clientHeight;if(ah>0){I.style.height=ah+'px';I.style.flex='none'}}
+const w=I.clientWidth;if(!w||!I.clientHeight)return;
 const n=Math.max(1,Math.floor((w+o.gap)/(o.min+o.gap)));if(n!=o.cols){o.cols=n;I.style.columnCount=n}
 if(o.vars)I.style.setProperty('--ph',I.clientHeight+'px');
-const sx=I.style.transform;I.style.transition='none';I.style.transform='';const hr=I.getBoundingClientRect();let right=hr.right;
-for(const c of I.children){const r=c.getBoundingClientRect();if(r.width&&r.right>right)right=r.right}
+const sx=I.style.transform;I.style.transition='none';I.style.transform='';const hr=I.getBoundingClientRect();let right=Math.max(hr.right,hr.left+I.scrollWidth);
+/* v6.1.6 · count every column fragment (getClientRects), not one bounding box per child: WebKit reports a split child by its first fragment */
+for(const c of I.children)for(const r of c.getClientRects())if(r.width&&r.right>right)right=r.right;
 I.style.transform=sx;void I.offsetWidth;I.style.transition='';
 const pages=Math.max(1,Math.round((right-hr.left+o.gap)/(w+o.gap)));o.n=pages;if(o.p>=pages)o.p=pages-1;place(o);paint(o);if(o.post)o.post(o)}
 function sched(){if(q)return;q=requestAnimationFrame(()=>{q=0;for(const o of L)measure(o);for(const o of L)measure(o)})}
@@ -3265,7 +3270,7 @@ GGLife.onResize(sched);return{make,sched,go,L}})();
 /* ---- console panels ---- */
 {const HP=document.createElement('div');HP.id='hpi';const hc=$('v-hero').firstElementChild;for(const id of['avw','avtx','hslots','hsel','hbag'])HP.append($(id));hc.append(HP);
 const PV={hero:'hpi',abil:'abl',shop:'shp',quest:'qst',pouch:'pch',forge:'frg',lab:'lab',skills:'skl',set:'setc'};
-for(const k in PV){const inner=$(PV[k]);PG.make(inner.parentElement,inner,k=='hero'?{min:280,vars:1,pre(){const a=$('avtx'),b=$('hslots'),f=(a.offsetParent?a.offsetHeight+6:0)+b.offsetHeight+16;HP.style.setProperty('--hf',f+'px')}}:{min:280})}}
+for(const k in PV){const inner=$(PV[k]);PG.make(inner.parentElement,inner,k=='hero'?{min:280,vars:1,fix:1,pre(){const a=$('avtx'),b=$('hslots'),f=(a.offsetParent?a.offsetHeight+6:0)+b.offsetHeight+16;HP.style.setProperty('--hf',f+'px')}}:{min:280,fix:1})}}
 /* ---- modals ---- */
 function popPager(modal,inner){const pop=modal.querySelector('.pop');const o=PG.make(pop,inner,{min:300,barIn:pop,barBefore:modal.id=='gl'?$('glb'):null,
 pre(o){const I=o.inner;I.style.height='';I.style.columnCount='';o.cols=0;const cs=getComputedStyle(pop),mh=parseFloat(cs.maxHeight)||innerHeight*.9;
