@@ -1031,7 +1031,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.10';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.11';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -7166,6 +7166,10 @@ body.home .gw.gg-image-wrap,body.v601cov .gw.gg-image-wrap{animation-play-state:
    screen above them into its own full-screen GPU layer (~200 MB at 2.6×). On the Galaxy Fold inner screen Chrome ran out of
    GPU memory and left parts of the camp scene unpainted. Same fix the console already uses (v601cov): stop painting it. */
 body.home #app{visibility:hidden!important}
+/* v6.1.11 · the two full-screen effect canvases sit above the board and the menus. While the game is paused (pause menu, the main
+   menu opened from it, a Codex popup) their loops freeze time (dt=0) but keep drawing, so mana / skull trails in flight hung frozen
+   over the menu and the board. Hide them while paused and under the camp screen; on resume the trails carry on where they were. */
+body.paused #vxc,body.paused #jxc,body.home #vxc,body.home #jxc{visibility:hidden!important}
 </style>
 <style id="v606-update-toast">
 /* v6.0.6 · "new version ready" banner (efficiency #8) */
