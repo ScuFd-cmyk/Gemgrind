@@ -1028,7 +1028,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.6';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.7';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -3039,6 +3039,8 @@ body.focus #tabs{transform:translate3d(0,-110%,0)}
 .pgi .fslot,.pgi .rw,.pgi .tg,.pgi .mix,.pgi .qlg,.pgi .ab,.pgi .row,.pgi .mrow,.pgi .pgrid,.pgi .eqs,.pgi #hslots,.pgi .avv,.pgi .avtx,.pgi #abl>div,.pgi>p{break-inside:avoid}
 .pgbar{flex:none;display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 0 0;margin-top:6px;border-top:1px solid rgba(201,162,78,.22)}
 .pgbar[hidden]{display:none!important}
+/* v6.1.7 · pager fallback (see PG.measure): scroll the panel instead of clipping it */
+.pgi.pgscr{overflow-x:hidden!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 .pgbar button{min-height:38px!important;min-width:44px!important;padding:2px 12px;font-size:15px}
 .pgd{display:flex;gap:7px;align-items:center}
 .pgd i{width:8px;height:8px;border-radius:50%;background:#3a2c1c;box-shadow:inset 0 0 0 1px #6a4e26;transition:transform .2s,background .2s;cursor:pointer}
@@ -3252,7 +3254,8 @@ function place(o){const w=o.inner.clientWidth+o.gap;o.inner.style.transform=o.p?
 function paint(o){const sig=o.n+':'+o.p;if(sig==o.sig)return;o.sig=sig;o.bar.hidden=o.n<2;if(o.n<2)return;
 o.bar.querySelector('.pgd').innerHTML=Array.from({length:o.n},(_,i)=>'<i data-i="'+i+'"'+(i==o.p?' class="on"':'')+'></i>').join('');o.bar.querySelector('.pgn').textContent=(o.p+1)+' / '+o.n;
 const[a,b]=o.bar.querySelectorAll('[data-pg]');a.disabled=o.p<=0;b.disabled=o.p>=o.n-1}
-function measure(o){const h=o.host;if(!h.isConnected||!h.offsetParent||h.closest('[hidden]'))return;if(o.pre)o.pre(o);const I=o.inner;
+/* v6.1.7 · "is it shown" via getClientRects(), not offsetParent: iOS WebKit can report offsetParent null inside the fixed console drawer (cf. the v5.7 fitZoom fix), so every panel skipped measuring and never paged */
+function measure(o){const h=o.host;if(!h.isConnected||!h.getClientRects().length||h.closest('[hidden]'))return;if(o.pre)o.pre(o);const I=o.inner;
 /* v6.1.6 · iOS WebKit lays a flex-sized multicol box out as if its height were open, so the columns stacked down and were clipped
    (hero inventory showed no pager on iPhone). Pin the flex-given height in px so the columns overflow sideways in every engine. */
 if(o.fix){I.style.height='';I.style.flex='';const ah=I.clientHeight;if(ah>0){I.style.height=ah+'px';I.style.flex='none'}}
@@ -3263,8 +3266,11 @@ const sx=I.style.transform;I.style.transition='none';I.style.transform='';const 
 /* v6.1.6 · count every column fragment (getClientRects), not one bounding box per child: WebKit reports a split child by its first fragment */
 for(const c of I.children)for(const r of c.getClientRects())if(r.width&&r.right>right)right=r.right;
 I.style.transform=sx;void I.offsetWidth;I.style.transition='';
-const pages=Math.max(1,Math.round((right-hr.left+o.gap)/(w+o.gap)));o.n=pages;if(o.p>=pages)o.p=pages-1;place(o);paint(o);if(o.post)o.post(o)}
-function sched(){if(q)return;q=requestAnimationFrame(()=>{q=0;for(const o of L)measure(o);for(const o of L)measure(o)})}
+const pages=Math.max(1,Math.round((right-hr.left+o.gap)/(w+o.gap)));o.n=pages;if(o.p>=pages)o.p=pages-1;place(o);paint(o);
+/* v6.1.7 · safety net: a one-page panel whose content still runs off the bottom (the engine did not fragment the columns) scrolls instead of clipping */
+if(o.fix)I.classList.toggle('pgscr',pages<2&&I.scrollHeight>I.clientHeight+4);if(o.post)o.post(o)}
+function safe(o){try{measure(o)}catch(e){window.logDebugIssue&&logDebugIssue('WARN','PG.measure '+(o.inner.id||'?')+': '+(e&&e.message))}}
+function sched(){if(q)return;q=requestAnimationFrame(()=>{q=0;for(const o of L)safe(o);for(const o of L)safe(o)})}
 GGLife.onResize(sched);return{make,sched,go,L}})();
 
 /* ---- console panels ---- */
@@ -3905,7 +3911,7 @@ for(const b of HV.querySelectorAll('.hmp'))b.onclick=()=>{const R1=ROUTES.find(x
 $('hmmenu').onclick=()=>showMenu();
 /* add the Menagerie to the Character Console */
 {CONT.push(['pets','🐾','Menagerie']);CONS.add('pets');const vp=$('v-pets');$('conb').append(vp);const b=document.createElement('button');b.dataset.k='pets';b.innerHTML='🐾<small>Menagerie</small>';b.onclick=()=>{openCon('pets');draw()};$('cont').append(b);
- if(typeof PG=='object')PG.make(vp.firstElementChild,$('pets'),{min:300})}
+ if(typeof PG=='object')PG.make(vp.firstElementChild,$('pets'),{min:300,fix:1})}
 /* camp button on the main tab strip */
 {const b=document.createElement('button');b.innerHTML='🏕️<small>Camp</small>';b.title='Return to camp';b.onclick=()=>homeShow();$('tabs').insertBefore(b,tabBtns.con||null)}
 layer('showTab','v40-js',_st=>function(k){if(!CONS.has(k))homeHide();_st(k)});
