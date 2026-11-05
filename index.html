@@ -1028,7 +1028,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.7';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.8';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -7614,7 +7614,7 @@ const sess={id:sid,v:VER,start:T0,end:0,clean:0,entries:[],snaps:[]};let prev=[]
 const QDB=(()=>{let db=null,p=null;const open=()=>db?Promise.resolve(db):p||(p=new Promise((res,rej)=>{let r;try{r=indexedDB.open('GemgrindQA',1)}catch(e){rej(e);return}
  r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>rej(r.error)}));
  const op=(mode,fn)=>open().then(d=>new Promise(res=>{let tx;try{tx=d.transaction('kv',mode)}catch(e){res(null);return}const st=tx.objectStore('kv'),q=fn(st);tx.oncomplete=()=>res(q&&'result'in q?q.result:1);tx.onerror=tx.onabort=()=>res(null)})).catch(()=>null);
- return{get:k=>op('readonly',s=>s.get(k)),set:(k,v)=>op('readwrite',s=>s.put(v,k))}})();
+ return{get:k=>op('readonly',s=>s.get(k)),set:(k,v)=>op('readwrite',s=>s.put(v,k)),del:k=>op('readwrite',s=>s.delete(k))}})();
 /* ---------- mirror: last lines + clean flag, synchronous ---------- */
 let bg=0,closing=0;function mirror(clean){clean=clean||closing;try{localStorage.setItem('gg_qamirror',JSON.stringify({id:sid,v:VER,start:T0,end:now(),clean:clean?1:0,bg,tail:sess.entries.slice(-MIRROR),crumbs:crumbs.slice(-12)}))}catch(_){}}
 function flush(){if(!dirty)return;dirty=0;sess.end=now();QDB.set('cur',sess);mirror(0)}
@@ -7630,7 +7630,7 @@ function tap(k,msg,t){const e={t,ts:now(),k,msg};if(ISSUE.has(k)){e.crumbs=crumb
 window.__qaTap=tap;
 
 /* ---------- breadcrumbs ---------- */
-function crumb(a){crumbs.push({ts:now(),a:hms(now()-T0)+' '+a});if(crumbs.length>CRUMBS)crumbs.shift()}
+function crumb(a){crumbs.push({ts:now(),a:hms(now()-T0)+' '+a});if(crumbs.length>CRUMBS)crumbs.shift();try{window.__qaCrumb&&window.__qaCrumb(a)}catch(_){}/* v6.1.8 · run journal */}
 const who=()=>window.AutoplayEngine&&AutoplayEngine.on?'bot':'you';
 document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest('button,[role=button],[data-a],a,.hmp,g.nd');if(!el||el.closest('#debugTestingConsole,#dbgCog'))return;
  let d;if(el.classList.contains('g')&&el._i!=null)d='gem ('+el._i%N+','+(el._i/N|0)+')';else d=(el.id?'#'+el.id+' ':'')+String(el.getAttribute('aria-label')||el.textContent||el.dataset.a||'').replace(/\s+/g,' ').trim().slice(0,30);
@@ -8267,6 +8267,89 @@ let box=null;function paint(){const pane=document.getElementById('dbgBal');if(!p
 setInterval(()=>{const p=document.getElementById('dbgBal');if(p&&!p.hidden)paint()},5000);setTimeout(paint,500);
 if(window.QARec){const r0=QARec.report;QARec.report=function(){const r=r0.apply(this,arguments);try{r.advisor={suggestions:sugg,damageBySource:src,brain:QABrain.stats}}catch(_){}return r}}
 return{analyse,suggest,paint,get sources(){return src},get suggestions(){return sugg}}})();
+
+/* =====================================================================
+   v6.1.8 · 📜 RUN JOURNAL (debug only)
+   One continuous log per hero, from character creation to the end of the campaign, across reloads and app launches.
+   - Records every console log line, every breadcrumb (taps, swaps, skills, tabs, travel, wins, defeats) and run markers.
+   - Play clock counts only while the game is on screen: it pauses when the page is hidden or closed and resumes when
+     the game is back. Each pause / resume is a line in the journal (with the time away).
+   - Ends on the real campaign victory (winBase setting S.done on the final guardian); a new hero starts a new journal
+     and the old one is kept as the previous run. A save that already has a hero joins mid-run.
+   - Stored in IndexedDB "GemgrindQA" (never the game save) in chunks of 500 lines so each write stays small; at most
+     200 chunks (100k lines), oldest trimmed first. 📜 Run exports it all; 💾 Export carries the summary + last 300 lines.
+   ===================================================================== */
+window.QARun=(()=>{if(!window.QARec||!QARec.QDB||!QARec.QDB.del)return null;const Q=QARec.QDB,CH=500,MAXCH=200,TAIL=300,now=()=>Date.now();
+const hms=ms=>{const s=Math.floor(ms/1000),p=n=>String(n).padStart(2,'0');return p(Math.floor(s/3600))+':'+p(Math.floor(s/60)%60)+':'+p(s%60)};
+const away=ms=>ms<60000?Math.round(ms/1000)+' s':ms<3600000?Math.round(ms/60000)+' min':(ms/3600000).toFixed(1)+' h';
+let meta=null,chunk=[],pend=0,ready=0,since=0,early=[],wantStart='';
+const play=()=>meta?meta.play+(since?now()-since:0):0,rec=()=>!!(meta&&!meta.fin);
+function hero(){try{return S.hero?{name:String(S.hero.name||''),cls:S.cls,lvl:C().l,diff:S.diff,node:S.at,frontier:S.loc}:null}catch(_){return null}}
+const hs=h=>h?h.name+' · '+h.cls+' Lv '+h.lvl+' · '+(DIFF[h.diff]?DIFF[h.diff].n:'diff '+h.diff)+' · node '+h.node+'/'+h.frontier:'no hero';
+const key=i=>'run:'+meta.id+':'+i;
+function add(k,msg,ts){if(!ready){if(early.length<400)early.push([k,msg,now()]);return}if(!rec())return;
+ chunk.push([hms(play()),ts||now(),k,String(msg==null?'':msg).slice(0,400)]);meta.n++;pend=1;if(chunk.length>=CH)roll()}
+function roll(){Q.set(key(meta.ch),chunk);meta.ch++;chunk=[];while(meta.ch-meta.lo>MAXCH){Q.del(key(meta.lo));meta.lo++;meta.trim=(meta.trim||0)+CH}pend=1;flush()}
+function flush(){if(!meta||!(pend||since))return;const dl=pend;pend=0;meta.last=now();const m=Object.assign({},meta,{play:play()});
+ /* sync mirror first: IndexedDB writes started in pagehide may never land, localStorage does */
+ try{localStorage.setItem('gg_runmirror',JSON.stringify({m,len:chunk.length,tail:chunk.slice(-50)}))}catch(_){}
+ Q.set('run',m);if(dl)Q.set(key(meta.ch),chunk.slice())}
+setInterval(flush,2000);
+/* pause / resume with the page */
+function pause(why){if(!since)return;add('RUN','⏸ Paused · '+why+' · played '+hms(play()));meta.play+=now()-since;since=0;meta.pz=now();pend=1;flush()}
+function resume(why){if(since||!rec())return;const gap=now()-(meta.pz||meta.last||now());since=now();add('RUN','▶ Resumed · '+why+' · away '+away(gap));flush()}
+let closing=0;/* after pagehide nothing may resume the clock until the page is shown again */
+document.addEventListener('visibilitychange',()=>{if(!ready)return;if(document.hidden)pause('game hidden');else if(!closing)resume('game back on screen')});
+addEventListener('pagehide',()=>{closing=1;if(ready)pause('game closed')});
+addEventListener('pageshow',e=>{closing=0;if(ready&&e.persisted&&!document.hidden)resume('game reopened')});
+/* runs */
+async function dropRun(m){if(!m)return;for(let i=m.lo||0;i<=m.ch;i++)await Q.del('run:'+m.id+':'+i)}
+async function start(reason){if(!ready){wantStart=reason;return}
+ if(meta){flush();const old=Object.assign({},meta,{play:play()});if(!old.fin){old.fin=now();old.end='replaced · '+reason}await dropRun(await Q.get('runPrev'));await Q.set('runPrev',old)}
+ const h=hero();meta={id:String(now()),v:GG_VERSION,hero:h,started:now(),last:now(),play:0,n:0,ch:0,lo:0,sess:1,fin:0,end:''};chunk=[];since=document.hidden?0:now();
+ add('RUN','🆕 Run started · '+reason+' · '+hs(h)+' · v'+GG_VERSION);pend=1;flush()}
+function finish(why){if(!rec())return;add('RUN','🏁 Run finished · '+why+' · played '+hms(play())+' over '+meta.sess+' launch'+(meta.sess==1?'':'es')+' · '+hs(hero()));
+ meta.play=play();since=0;meta.fin=now();meta.end=why;pend=1;flush();try{window.logDebugIssue('INFO','📜 Run journal closed: '+why+' · '+meta.n+' lines · 📜 Run to export')}catch(_){}}
+/* feed: every console line + every breadcrumb */
+{const t0=window.__qaTap;window.__qaTap=function(k,msg){try{t0&&t0.apply(this,arguments)}catch(_){}try{add(k,msg)}catch(_){}}}
+window.__qaCrumb=a=>{try{add('ACT',a)}catch(_){}};
+/* character creation starts a journal; the final guardian victory ends it */
+layer('newGame','debug-run',inner=>function(){const r=inner.apply(this,arguments);try{start('character created')}catch(_){}return r});
+layer('win','debug-run',inner=>function(){let d0=1,df=-1;try{d0=S.done;df=S.diff}catch(_){}const r=inner.apply(this,arguments);try{if(!d0&&S.done&&S.diff===df)finish('campaign complete')}catch(_){}return r});
+/* boot: resume this hero's journal, or start one */
+(async()=>{let m0=null,c0=[];try{m0=await Q.get('run');if(m0)c0=(await Q.get('run:'+m0.id+':'+m0.ch))||[]}catch(_){}
+ /* the localStorage mirror wins when it is newer (the last IndexedDB writes before a close did not land) */
+ try{const x=JSON.parse(localStorage.getItem('gg_runmirror')||'null');if(x&&x.m&&(!m0||(x.m.id===m0.id&&(x.m.last||0)>(m0.last||0)))){
+  if(m0&&x.m.ch===m0.ch){const miss=x.len-c0.length;if(miss>0&&miss<=x.tail.length)c0=c0.concat(x.tail.slice(-miss))}else if(!m0)c0=x.tail.slice();m0=x.m}}catch(_){}
+ const h=hero(),same=!!(m0&&h&&m0.hero&&m0.hero.name===h.name&&m0.hero.cls!=null);
+ meta=m0;chunk=Array.isArray(c0)?c0:[];ready=1;
+ if(wantStart){await start(wantStart);wantStart=''}
+ else if(same&&!m0.fin){const gap=now()-(m0.pz||m0.last||now());meta.sess=(meta.sess||1)+1;since=document.hidden?0:now();
+  add('RUN','▶ Resumed · app launch #'+meta.sess+' · v'+GG_VERSION+' · away '+away(gap)+' · '+hs(h));flush()}
+ else if(h&&!same)await start(m0?'a different hero / save was loaded':'journal added mid-run');
+ for(const[k,msg,ts]of early.splice(0))add(k,msg,ts);
+ paint()})();
+/* export: the whole journal as one file */
+async function all(m){m=m||meta;if(!m)return[];const out=[];for(let i=m.lo||0;i<m.ch;i++){const c=await Q.get('run:'+m.id+':'+i);if(Array.isArray(c))out.push(...c)}
+ if(m===meta)out.push(...chunk);else{const c=await Q.get('run:'+m.id+':'+m.ch);if(Array.isArray(c))out.push(...c)}return out}
+const info=m=>m?{id:m.id,hero:m.hero,heroNow:m===meta?hero():undefined,startedVersion:m.v,started:new Date(m.started).toISOString(),lastWrite:new Date(m.last||m.started).toISOString(),
+ played:hms(m===meta?play():m.play),launches:m.sess,lines:m.n,trimmedOldest:m.trim||0,recording:m===meta?rec()&&!!since:false,finished:m.fin?new Date(m.fin).toISOString():null,end:m.end||null}:null;
+async function exportRun(){flush();const lines=await all(),prev=await Q.get('runPrev'),d=new Date(),p=n=>String(n).padStart(2,'0'),
+ fn='gemgrind-run-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+'.json',
+ r={format:'gemgrind-run-journal',version:GG_VERSION,exported:d.toISOString(),columns:['played','wallMs','kind','message'],run:info(meta),previousRun:info(prev),lines},
+ blob=new Blob([JSON.stringify(r).replace(/\],\[/g,'],\n[')],{type:'application/json'});let how='download';
+ try{const f=new File([blob],fn,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Gemgrind run journal'});how='share sheet'}else throw 0}
+ catch(e){if(e&&e.name=='AbortError')return;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+ try{window.logDebugIssue('INFO','📜 Exported '+fn+' via '+how+' ('+Math.round(blob.size/1024)+' KB · '+lines.length+' lines · played '+hms(play())+')')}catch(_){}return fn}
+/* the QA report carries the journal summary and its last lines */
+{const r0=QARec.report;QARec.report=function(){const r=r0.apply(this,arguments);try{r.run=info(meta);r.runTail=chunk.slice(-TAIL)}catch(_){}return r}}
+/* console button: live play clock */
+let btn=null;function paint(){if(!btn){const h=document.querySelector('#dbgRh>span:last-child');if(!h)return;btn=document.createElement('button');btn.type='button';btn.className='dbgmini';btn.id='dbgRun';
+ btn.onclick=e=>{e.stopPropagation();exportRun()};h.prepend(btn)}
+ const st=!meta?'no run':meta.fin?'🏁':since?'●':'⏸';btn.textContent='📜 Run '+(meta?hms(play())+' ':'')+st;
+ btn.title=meta?'Run journal for '+hs(meta.hero)+' · '+meta.n+' lines · '+(meta.sess||1)+' launch(es)'+(meta.fin?' · finished: '+meta.end:'')+' · tap to export the whole journal':'Starts when a hero is created'}
+setInterval(()=>{const c=document.getElementById('debugTestingConsole');if(btn&&c&&c.hidden)return;paint()},1000);
+return{start,finish,pause,resume,exportRun,all,get meta(){return meta},get played(){return play()},get recording(){return rec()&&!!since}}})();
 
 /* END PLAYTESTING DEBUG TOOLS */
 </script>
