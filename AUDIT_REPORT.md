@@ -147,7 +147,7 @@ Calibrated default run (bare Warrior, required fights only, all-Rare gear, 750 f
 
 ### Balance thresholds: player burst vs. high-difficulty HP  [🔍 Pass]
 
-- **Combo multiplier is linear:** `cm = 1 + (combo−1)·(Chain ? 1.5 : 1)`. The cascade loop is capped at 80 steps, and `P.cc` (next-skill multiplier) is capped at 5.
+- **Combo multiplier is linear:** `cm = 1 + (combo−1)·(Chain ? 1.5 : 1)`. The cascade loop is capped at 80 steps, and `P.cc` (next-skill multiplier) was capped at 5 (v6.1.4: half slope, capped at 3, see W5).
 - **Catalyst+Catalyst is a one-step flat ×5 wipe:** `hit(atk·0.25·49·5)`, about 61× Attack plus skulls.
 - **It doesn't invalidate high-difficulty HP:** at the model's final guardian, enemy HP is about 430× (Normal) to 730× (Grindmaster) hero Attack, so a wipe (≈ 90× Attack including skulls) deals about 12–21%. In mid-game (continent 10, ≈ 43× Attack) a wipe can still one-shot, which is fine for a rare combo. Player burst is **not** the problem; the shortfall is (W2).
 
@@ -400,5 +400,7 @@ Each fix was checked in headless Chromium, against the pre-fix build where that'
 Inferno at C20 (Mage, Lv10): rank 1 → 7 of 27 damage skills. Inferno Lv1 at C1: 222% → 80% of the guardian's HP.
 
 **Caveat (interacts with W2):** `GGBalance` folds skills into its calibrated `skulls` rate (fitted on C1–C3 play, where this change moves skill damage only about −10%), so `tools/balance-sim.js` shows no drift. In real play, late-campaign skills now hit 3–4× softer (median Lv1 cast vs a C50 guardian: 9.1% → 2.5% of its HP), so the W2 late wall will be felt more. Re-fit the harness from new QA exports.
+
+**v6.1.4 follow-up · next-skill multiplier:** any player cascade of 2+ steps armed `P.cc = peak cm` (cap ×5), so a plain 2-step cascade doubled the next damage skill; 19.6% of AI moves on real boards cascade at least twice. Now `P.cc = 1 + (peak cm − 1)·0.5`, capped at ×3 (2-step → ×1.5, 3-step → ×2, 5-step → ×3). Average multiplier on a damage cast after 3 charge moves: ×1.62 → ×1.31 (2 moves ×1.45 → ×1.23, 4 moves ×1.77 → ×1.38). Checked on a built 2-step cascade board through the real `resolve()`: "Next skill ×2" → "×1.5".
 
 **Regression checks:** `node tools/balance-sim.js` no drift (750 fights); browser smoke with no flag and `?debug=0`: no page errors, a new hero wins (skill cast) and loses (purse paid), save survives reload, debug cog shown by default and hidden with `?debug=0`.

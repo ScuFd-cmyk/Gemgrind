@@ -1028,7 +1028,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.3';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.4';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -1972,7 +1972,7 @@ syncBoard();await wait(320);if(E!==E0)break;
 if(cs[6]&&!GT){if(who){if(st.ks.iron)fl('💀 Immune','#9ca3af');else{await atk(0);await pdmg(E.at*.6*cs[6]*cm*D().sk*(E.enr?2:1)*BX('skull_e')/*BX*/,0)}if(E.elite&&!dead)eliteHex()}else if(!st.ks.splash&&Math.random()<eBlock()){fl('🛡️ BLOCKED!'+(S.fg.pen?'':' Forge a Piercer'),'#93c5fd','ecard');msg(E.n+' blocked your skull attack!')}else{hit(st.atk*.8*cs[6]*cm*st.skd*D().sk*(st.ks.splash?1.25:1)*(guard>0?1+.06*LV('csr'):1)*BX('skull_p')/*BX*/);if(st.ks.splash&&!E.dead){fl('🌋 Elemental Splash','#ff9a3a','ecard');inflict('e','burn',2)}}}
 if(wipe&&!GT&&!E.dead&&!dead){if(pl){fl('🌌 BOARD WIPE ×'+fmtM(cm)+'!','#e9d5ff','ecard');hit(st.atk*.25*all.length*cm*BX('wipe_p')/*BX*/)}else{await atk(1);await pdmg(E.at*3*BX('wipe_e')/*BX*/,1)}}
 draw();achCheck()}
-if(!who&&!GT&&peak>=2&&!E.dead){P.cc=Math.min(5,Math.max(P.cc,peak));fl('⚡ Next skill ×'+fmtM(P.cc),'#ffd27a','pcard')}
+/* v6.1.4 · flatter next-skill multiplier: half the cascade's slope, cap ×3 (was ×peak, cap ×5; a plain 2-step cascade doubled the next skill). Average damage cast over 3 charge moves ×1.62 → ×1.31 */if(!who&&!GT&&peak>=2&&!E.dead){P.cc=Math.min(3,Math.max(P.cc,1+(peak-1)*.5));fl('⚡ Next skill ×'+fmtM(P.cc),'#ffd27a','pcard')}
 return big}
 const AW=[2,2,2,2,2,2,4];
 function aiMove(){const L=[];tryMoves((a,b)=>{const m=find();if(m.size){let s=0;m.forEach(i=>s+=AW[B[i]]);L.push([s,a,b])}});

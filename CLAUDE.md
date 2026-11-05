@@ -141,7 +141,7 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
 **Combat invariants:**
 - **Cascade loop:** at most 80 steps (`guard<80`). Never recurse.
 - **Combo:** `cm = 1 + (combo−1)·(Chain ? 1.5 : 1)` for the player and `1 + (combo−1)·0.5` for the enemy. A Catalyst+Catalyst wipe is a flat ×5 for the player and ×3 for the enemy (same halved slope, audit W4). Each multiplier is applied once per hit.
-- **Caps:** next-skill `P.cc ≤ 5`, enemy block `≤ 0.9`, dodge `≤ 0.35`, cooldown reduction `≤ 0.3`, Cursed Rocks `≤ 12`.
+- **Caps:** next-skill `P.cc = 1 + (peak cm − 1)·0.5`, `≤ 3` (armed by any cascade of 2+ steps), enemy block `≤ 0.9`, dodge `≤ 0.35`, cooldown reduction `≤ 0.3`, Cursed Rocks `≤ 12`.
 - **Random gems:** every random gem that appears mid-fight (cascade refill, Thawing Rune) must come from `refillGem()`; rules shape it there (Barren Emeralds overrides it). Never rewrite `B` inside `syncBoard()` or any other render function.
 - **Move search:** `tryMoves()` only offers swaps that form a line through one of the two swapped cells, unless the board already has a match. Callbacks must not depend on seeing non-matching swaps.
 - **Board recovery:** `ensure()` runs after every move and tactic. It tries up to 200 shuffles, then regenerates the board, so there is never a no-move state.
