@@ -7,7 +7,7 @@
    node tools/balance-sim.js                       run + compare with the baseline (exit 1 on drift)
    node tools/balance-sim.js --update-baseline     accept the current numbers as the new baseline
    node tools/balance-sim.js --targets=tools/balance-targets.json [--strict]   check design targets (exit 2 with --strict)
-   options: --diffs=0,2,4  --nodes=sample|guardians|all  --build=bare|current  --cls=Warrior  --skulls=3
+   options: --diffs=0,2,4  --nodes=sample|guardians|all  --build=bare|current  --cls=Warrior  --skulls=0.94  --enemySkulls=1.16  --sustain=1.16
             --combo=1.3  --enemyCombo=1.2  --gearRarity=2  --seed=7  --ng=0  --tol=0.005  --csv=out.csv  --json=out.json
    Needs Playwright with Chromium (npm i -D playwright && npx playwright install chromium). */
 'use strict';
@@ -19,7 +19,7 @@ let chromium;try{({chromium}=require('playwright'))}catch(e){console.error('Play
 const opts={};
 if(args.diffs)opts.diffs=String(args.diffs).split(',').map(Number);
 for(const k of['nodes','build','cls'])if(args[k])opts[k]=String(args[k]);
-for(const k of['skulls','combo','enemyCombo','gearRarity','seed','ng'])if(args[k]!=null)opts[k]=Number(args[k]);
+for(const k of['skulls','enemySkulls','sustain','combo','enemyCombo','gearRarity','seed','ng'])if(args[k]!=null)opts[k]=Number(args[k]);
 const BASE=path.resolve(ROOT,args.baseline||'tools/balance-baseline.json'),TOL=Number(args.tol||0.005);
 
 const TYPES={'.html':'text/html','.js':'text/javascript','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png'};
@@ -38,7 +38,7 @@ const server=http.createServer((q,r)=>{const f=path.join(ROOT,decodeURIComponent
   const res=await page.evaluate(o=>GGBalance.run(o),opts);
   if(errs.length)console.warn('page errors:',errs.slice(0,5));
   const o=res.opts;
-  console.log(`Gemgrind balance sim · build=${o.build} cls=${o.cls} nodes=${o.nodes} skulls/turn=${o.skulls} combo=${o.combo} enemyCombo=${o.enemyCombo} gear rarity=${o.gearRarity} seed=${o.seed} · ${res.rows.length} fights in ${res.ms} ms\n`);
+  console.log(`Gemgrind balance sim · build=${o.build} cls=${o.cls} nodes=${o.nodes} skulls/turn=${o.skulls} enemy skulls/turn=${o.enemySkulls} sustain=×${o.sustain} combo=${o.combo} enemyCombo=${o.enemyCombo} gear rarity=${o.gearRarity} seed=${o.seed} · ${res.rows.length} fights in ${res.ms} ms\n`);
   console.table(Object.fromEntries(Object.entries(res.summary).map(([k,s])=>[k,{'first loss':s.firstLoss||'none','first enrage wall':s.firstEnrageWall||'none','peak power needed':'×'+s.maxPowerNeeded.toFixed(2),'at':s.at}])));
   const G=res.rows.filter(r=>r.fight=='continent guardian'&&(r.cont==1||r.cont%5==0));
   {for(const d of [...new Set(G.map(r=>r.diff))]){console.log('\n'+d+' · continent guardians (every 5th)');

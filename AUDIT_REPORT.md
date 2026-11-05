@@ -105,20 +105,27 @@ The HUD at line 1920 prints `16+LV('pvt')-(E.pt||0)` and must use the same `enrA
 
 **Harness built (v6.0.6).** `window.GGBalance` (`<script id="v606-balance-harness">`) runs the game's own `newEnemy()`, `stat()`, `heal()`, `genItem()` and `eBlock()` on a cloned save, and `tools/balance-sim.js` drives it from the command line. It checks results against `tools/balance-baseline.json` (one fight per line, 0.5% tolerance) and, optionally, against design targets. The debug console's **📐 Balance sim** button runs the same model on the phone.
 
-Default run (bare Warrior, required fights only, all-Rare gear, 3 skulls per turn, 750 fights, ~130 ms):
+**Calibrated run (v6.1.2).** Fitted to a real QA export: v6.1.1, Warrior on Grindmaster, nodes 0–11, 84 fights including 41 guardians.
+- **Enemy HP:** the model matched the real game at every node (36 of 41 exactly, the rest within 1 HP of shield rounding).
+- **Fitted values:** 0.94 effective skull matches per turn for the hero, 1.16 for the enemy, and a sustain factor of ×1.16 (mid-fight heals, armor skills and potions; in losses the hero absorbed a median 1.16× their HP + armor).
+- **Check:** on those 41 guardian fights the calibrated model gives power needed ×1.19, i.e. slightly losing (real: 27% wins, each won only after retries). A continent-1 city fight comes out at ×0.34 (real: 100% wins in ~3.6 turns). The old defaults (3 skulls both sides, no sustain) gave ×0.99, a coin flip.
+
+Calibrated default run (bare Warrior, required fights only, all-Rare gear, 750 fights):
 
 | Difficulty | First guardian the bare hero loses | First guardian that can't be killed before enrage | Peak power needed |
 |---|---|---|---|
-| Story | C9 | C29 (city guardian) | ×26.8 (C49) |
-| Casual | C8 | C21 (city guardian) | ×43.9 (C50 city) |
-| Normal | C4 | C14 | ×81.7 (C50) |
-| Hard | C1 | C8 | ×97.5 (C50) |
-| Grindmaster | C1 (city guardian) | C11 | ×220.8 (C49) |
+| Story | C9 | C11 (city guardian) | ×42.7 (C49) |
+| Casual | C8 (city guardian) | C7 | ×70.0 (C50 city) |
+| Normal | C3 (city guardian) | C3 (city guardian) | ×104.3 (C50) |
+| Hard | C1 (city guardian) | C1 (city guardian) | ×155.6 (C50) |
+| Grindmaster | C1 (city guardian) | C2 (city guardian) | ×352.3 (C49) |
+
+(Pre-calibration model, for comparison: Normal first loss C4, enrage wall C14, peak ×81.7.) The calibration comes from one class on one difficulty over the first 12 nodes. Re-fit it as exports arrive from other classes, difficulties and later continents.
 
 **Power needed** is how much the excluded systems (passives, skills, research, pets, keystones) must multiply the bare hero's damage to win. It climbs from below ×1 to ×80+ on Normal, so how much those systems actually provide decides whether the endgame is winnable.
 
 **Next steps (design decisions):**
-1. **Calibrate the model:** the Bug Monitor's per-fight BALANCE lines (turns, damage dealt and taken) from real playtests show the real skulls per turn and combo; pass them as `--skulls` and `--combo`.
+1. ~~**Calibrate the model**~~: done from the first real export (see above). Keep re-fitting it: the Bug Monitor's per-fight BALANCE lines give turns, damage dealt and damage taken.
 2. **Measure real builds:** run `GGBalance.run({build:'current'})` on well-built playtest saves to see what multiplier those systems really provide.
 3. **Write the targets:** copy `tools/balance-targets.example.json` to `balance-targets.json` with real numbers, then tune `campaignStatModifier`, `rewardMul` and the enrage turn until `--targets … --strict` passes. Re-record the baseline in the same commit.
 
