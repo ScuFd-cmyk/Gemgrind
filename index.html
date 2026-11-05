@@ -1031,7 +1031,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.11';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.12';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -1756,7 +1756,7 @@ function openConBase(k){if(k)conTab=k;if(conTab=='tree')wcen=0;if(conTab=='set')
 function closeConBase(now){const c=$('console');if(!conOpen&&c.hidden)return;conOpen=0;c.classList.remove('open');curTab=mainTab;syncTabBtns();clearTimeout(conT);if(now||RM())c.hidden=true;else conT=setTimeout(()=>{if(!conOpen)c.hidden=true},430)}
 function showTabBase(k){if(CONS.has(k)){openCon(k);return}closeCon(1);curTab=mainTab=k;setFocus(k=='battle');if(k=='map'){mapSc=-1;if(!walking)mapC=(S.at/21)|0}for(const[j]of MAINT)$('v-'+j).hidden=j!=k;syncTabBtns()}
 /* ===== Gemgrind high-resolution rendered gem image library ===== */
-const GG_GEM_ASSETS = {"standard":["assets/gem-e2db932b74.webp","assets/gem-007f932952.webp","assets/gem-b3fe64a54b.webp","assets/gem-62fbd5b225.webp","assets/gem-e5a7062796.webp","assets/gem-e5e5bff133.webp","assets/gem-589e1e010f.webp"],"attack":["assets/gem-ac51e45adc.webp","assets/gem-4fe9d0550a.webp","assets/gem-32910125dc.webp","assets/gem-19420c7962.webp","assets/gem-67e36bc368.webp","assets/gem-40d395d9f5.webp","assets/gem-ebf741de83.webp"],"four":["assets/gem-0fdd55b2d0.webp","assets/gem-71cb23781b.webp","assets/gem-84fc505d88.webp","assets/gem-c10e726d95.webp","assets/gem-29d415d46d.webp","assets/gem-c4f3651bcf.webp","assets/gem-a78aa2c8e4.webp"],"ultimate":"assets/gem-50641a6f14.webp"};
+const GG_GEM_ASSETS = {"standard":["assets/gem-a0aead6761.webp","assets/gem-6f2a8028d6.webp","assets/gem-813c3392be.webp","assets/gem-b798c09a1d.webp","assets/gem-56c4f19b34.webp","assets/gem-73d450327d.webp","assets/gem-6b7d367f71.webp"],"attack":["assets/gem-ac51e45adc.webp","assets/gem-4fe9d0550a.webp","assets/gem-32910125dc.webp","assets/gem-19420c7962.webp","assets/gem-67e36bc368.webp","assets/gem-40d395d9f5.webp","assets/gem-ebf741de83.webp"],"four":["assets/gem-75ce60bda4.webp","assets/gem-c6e470295e.webp","assets/gem-bddcdadec4.webp","assets/gem-b5050e7a12.webp","assets/gem-694bbbedf9.webp","assets/gem-36e4db890b.webp","assets/gem-03d24af340.webp"],"ultimate":"assets/gem-50641a6f14.webp"};
 const GG_GEM_GLOW=['#b51635','#c79a00','#087a3c','#075fc7','#7813a5','#b64a08','#6c91bb'];
 const GG_GEM_IMAGE=(kind,v)=>{const src=kind==='ultimate'?GG_GEM_ASSETS.ultimate:GG_GEM_ASSETS[kind][v];return '<span class="gw gg-image-wrap gg-image-'+kind+' '+(kind==='ultimate'?'gg-ultimate-image':'')+'" style="--gem-glow:'+(GG_GEM_GLOW[v]||'#fff')+'"><img class="gg-art" src="'+src+'" alt="" draggable="false" decoding="async"><svg class="wrp" viewBox="0 0 100 100" aria-hidden="true"></svg></span>';};
 
@@ -7170,6 +7170,20 @@ body.home #app{visibility:hidden!important}
    menu opened from it, a Codex popup) their loops freeze time (dt=0) but keep drawing, so mana / skull trails in flight hung frozen
    over the menu and the board. Hide them while paused and under the camp screen; on resume the trails carry on where they were. */
 body.paused #vxc,body.paused #jxc,body.home #vxc,body.home #jxc{visibility:hidden!important}
+</style>
+<style id="v6112-gem-status">
+/* v6.1.12 · status looks on the crystal-image gems. The v5.3 status wraps (.wrp) trace the outline of the old vector gem cuts
+   (trillion ruby, round sapphire, coffin skull…); on the crystal images those outlines did not fit: circles, triangles and
+   dashed coffins floating around the art. On image tiles the wrap is hidden and each status is a glow on the image itself
+   (drop-shadow follows the art's own silhouette). Specific enough to beat the mobile "no gem filters" rule (v5.7d). */
+.g .gg-image-wrap>.wrp{display:none!important}
+.g.g.fz::after{content:'❄'!important;display:block!important;position:absolute;right:6%;top:3%;z-index:4;font-size:clamp(9px,calc(100cqw/7*.24),18px);color:#e0f7ff;text-shadow:0 0 4px #38bdf8;pointer-events:none}
+.g.g.trp .gw.gg-image-wrap .gg-art{filter:drop-shadow(0 0 1px #d8ffcf) drop-shadow(0 0 3px #5cff8a)!important}
+body.v53pb .g.g.w53b .gw.gg-image-wrap .gg-art,body.v53en .g.g.t6 .gw.gg-image-wrap .gg-art{filter:drop-shadow(0 0 1px #ffd28a) drop-shadow(0 0 3px #ff6a1a)!important}
+body.v53pp .g.g.w53p .gw.gg-image-wrap .gg-art{filter:drop-shadow(0 0 1px #d7ffb8) drop-shadow(0 0 3px #6dff3a)!important}
+.g.g.w53r .gw.gg-image-wrap .gg-art{filter:sepia(.35) drop-shadow(0 0 1px #e8d2a0) drop-shadow(0 0 3px #a0702a)!important}
+/* frozen wins over the other glows: it changes how the tile plays */
+.g.fz:not(#_) .gw.gg-image-wrap .gg-art{filter:saturate(.45) brightness(1.18) drop-shadow(0 0 1px #f2fbff) drop-shadow(0 0 1px #f2fbff) drop-shadow(0 0 3px #7dd3fc)!important}
 </style>
 <style id="v606-update-toast">
 /* v6.0.6 · "new version ready" banner (efficiency #8) */
