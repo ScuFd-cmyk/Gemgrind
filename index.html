@@ -693,8 +693,11 @@ window.GGLife=(()=>{const vis=[],rsz=[];let q=0;
 const each=(L,a)=>{for(const f of L){try{f(a)}catch(e){console.error('[Gemgrind] lifecycle handler failed',e)}}};
 /* the wake lock is re-requested synchronously, before any other module reacts to the tab returning */
 document.addEventListener('visibilitychange',()=>{const hidden=document.hidden;if(!hidden)window.GameWakeLockManager.requestWakeLock();each(vis,hidden)});
-const flushR=()=>{q=0;each(rsz)};
-addEventListener('resize',()=>{if(!q)q=requestAnimationFrame(flushR)});
+/* v6.1.9 · resize storms (Galaxy Fold inner screen re-entering full screen: ~10 resizes in 2 s) relaid out and reallocated every
+   full-screen canvas on each one, which flickered. A lone resize still runs on the next frame; while resizes keep arriving
+   less than 400 ms apart (a storm), the relayout waits until the size has been still for 300 ms. */
+let lastE=0,tR=0;const flushR=()=>{q=0;each(rsz)};
+addEventListener('resize',()=>{const t=performance.now(),storm=t-lastE<400;lastE=t;if(storm){if(q){cancelAnimationFrame(q);q=0}clearTimeout(tR);tR=setTimeout(()=>{tR=0;if(!q)q=requestAnimationFrame(flushR)},300)}else if(!q&&!tR)q=requestAnimationFrame(flushR)});
 return{onVisibility(f){vis.push(f);return f},onResize(f){rsz.push(f);return f},resize(){if(!q)q=requestAnimationFrame(flushR)},get counts(){return{visibility:vis.length,resize:rsz.length}}}})();
 </script>
 
@@ -1028,7 +1031,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.8';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.9';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -2916,7 +2919,7 @@ return o}
 function seed(ph,a){P=[];const add=(k,n,col)=>{for(let i=0;i<n;i++)P.push(mk(k,col))};
 if(ph==0){add('mist',3,'#d89a5a');add('ember',16,'#ffb35c')}else if(ph==1){add('mist',6,'#8f9cc8');add('fly',7,'#d9ffb0')}else{add('mist',3,'#a04040');add('dust',18,'#ff6a50')}
 if(a=='ash'){add('ember',14,'#ff7a2a');add('soot',12,'#2a2220')}else if(a=='spores'){add('spore',14,'#b6ff3a');add('mist',2,'#7a9a3a')}else if(a=='snow')add('snow',36,'#ffffff');else if(a=='bubbles')add('bub',18,'#9fe8ff');else if(a=='glitch'){add('ash',16,'#c79aff');add('glt',5,'#7af0ff')}else if(a=='sand')add('dust',24,'#e6c27a');else if(a=='wind')add('dust',16,'#e8f0f4');else if(a=='embers')add('ember',12,'#ffd27a');P.sort((p,q)=>(q.k=='mist')-(p.k=='mist'))}
-function size(){const sc=$('mapsc');if(!sc||!cv)return;const w=sc.clientWidth,h=sc.clientHeight,d=Math.min(1.5,devicePixelRatio||1);if(w!=W||h!=H||cv.width!=Math.round(w*d)){W=w;H=h;cv.width=Math.round(w*d);cv.height=Math.round(h*d);cv.style.width=w+'px';cv.style.height=h+'px';g.setTransform(d,0,0,d,0,0);for(const p of P){p.x=R()*W;p.y=R()*H}}}
+function size(){const sc=$('mapsc');if(!sc||!cv)return;const w=sc.clientWidth,h=sc.clientHeight,d=Math.min(1.5,devicePixelRatio||1);if(!w||!h)return;/* v6.1.9 · hidden map: keep the canvas (it was dropped to 0 and reallocated on every battle → map → battle travel) */if(w!=W||h!=H||cv.width!=Math.round(w*d)){W=w;H=h;cv.width=Math.round(w*d);cv.height=Math.round(h*d);cv.style.width=w+'px';cv.style.height=h+'px';g.setTransform(d,0,0,d,0,0);for(const p of P){p.x=R()*W;p.y=R()*H}}}
 function stop(){run=0;if(g){g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);const d=Math.min(1.5,devicePixelRatio||1);g.setTransform(d,0,0,d,0,0)}}
 function loop(ts){const v=$('v-map');if(!v||v.hidden||document.hidden||RM()||!cv.isConnected){stop();return}
 if(!last)last=ts;const dt=Math.min(.05,(ts-last)/1000);last=ts;if(++fr%45==0)size();g.clearRect(0,0,W,H);
@@ -3154,7 +3157,7 @@ const VX=(()=>{let cv=null,g=null,W=0,H=0,D=1,run=0,last=0;const P=[],T=[],SP={}
 const EL={fire:['#fff0b0','#ff8a1a','#ff2a10'],frost:['#ffffff','#bff3ff','#4aa8ff'],storm:['#ffffff','#fff27a','#ffc400'],nature:['#e8ffb0','#5cff8a','#1e9a40'],shadow:['#ffd0ff','#c060ff','#6a14b8'],earth:['#ffe0b0','#ff9a2a','#a8601c'],holy:['#ffffff','#ffe9a0','#ffc44a'],heal:['#f2ffe0','#5cff8a','#1fae4a']};
 const SPIN=new Set(['axe','dagger','hammer','star','orb']),pk=a=>a[(R()*a.length)|0];
 function spr(c){if(SP[c])return SP[c];const k=document.createElement('canvas');k.width=k.height=64;const x=k.getContext('2d'),r=x.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'#ffffff');r.addColorStop(.18,c);r.addColorStop(.5,c+'66');r.addColorStop(1,c+'00');x.fillStyle=r;x.fillRect(0,0,64,64);return SP[c]=k}
-function size(){if(!cv)return;D=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*D);cv.height=Math.round(H*D);cv.style.width=W+'px';cv.style.height=H+'px'}
+function size(){if(!cv)return;D=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;const pw=Math.round(W*D),ph=Math.round(H*D);/* v6.1.9 · a same-size re-set still wipes and reallocates the canvas */if(cv.width!=pw||cv.height!=ph){cv.width=pw;cv.height=ph}cv.style.width=W+'px';cv.style.height=H+'px'}
 function init(){if(cv)return;cv=document.createElement('canvas');cv.id='vxc';cv.setAttribute('aria-hidden','true');document.body.append(cv);g=cv.getContext('2d')||cv.getContext('2d');size();GGLife.onResize(size);
 if(typeof PJS=='object')for(const t in PJS){const w=t=='bolt'||t=='arrow',i=new Image();i.src='data:image/svg+xml,'+encodeURIComponent(PJS[t].replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" width="'+(w?160:80)+'" height="'+(w?40:80)+'" '));IM[t]=i}}
 function add(o){if(P.length>=MAXP)return;o.vx=o.vx||0;o.vy=o.vy||0;o.ax=o.ax||0;o.ay=o.ay||0;o.dr=o.dr||0;o.r=o.r||0;o.vr=o.vr||0;o.a=o.a==null?1:o.a;o.gr=o.gr||0;o.d=o.d||0;o.m=o.l;P.push(o)}
@@ -4676,7 +4679,7 @@ addEventListener('keydown',e=>{if(!TUT)return;if(e.key=='Enter'||e.key=='Escape'
 layer('openPM','v49-js',_opm=>function(){if(TUT)return;return _opm.apply(this,arguments)});
 /* canvas spotlight: rgba(0,0,0,.7) tint with a gold-rimmed cut-out around the newly unlocked control */
 let cw=0,ch=0,cd=1;
-function sizeCv(){cd=Math.min(2,devicePixelRatio||1);cw=innerWidth;ch=innerHeight;CV.width=Math.round(cw*cd);CV.height=Math.round(ch*cd);if(!G2)OV.classList.add('nocv')}
+function sizeCv(){cd=Math.min(2,devicePixelRatio||1);cw=innerWidth;ch=innerHeight;const pw=Math.round(cw*cd),ph=Math.round(ch*cd);if(CV.width!=pw||CV.height!=ph){CV.width=pw;CV.height=ph}/* v6.1.9 · reallocate only on a real change */if(!G2)OV.classList.add('nocv')}
 function targetRect(){const el=TUT&&TUT.target&&TUT.target();if(!el||!el.isConnected)return null;const r=el.getBoundingClientRect();if(r.width<2||r.height<2||r.bottom<0||r.top>ch)return null;
  for(let p=el;p;p=p.parentElement)if(p.hidden)return null;return r}
 function placeBox(){const r=targetRect(),h=BOX.offsetHeight||300;let top;if(r){const below=r.bottom+18,above=r.top-18-h;top=r.top+r.height/2>ch/2?Math.max(12,above):Math.min(ch-h-12,below)}else top=Math.max(12,(ch-h)/2);BOX.style.top=top+'px'}
@@ -5710,7 +5713,7 @@ function vib(p){if(!O('vib'))return;try{if(typeof navigator.vibrate=='function')
 
 /* ---------- juice canvas: capped, rAF-driven, sleeps when empty ---------- */
 const MAXJ=260,JP=[],SPR={};let cv=null,g=null,W=0,H=0,DP=1,run=0,last=0,tsc=1,frz=0;
-function size(){if(!cv)return;DP=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DP);cv.height=Math.round(H*DP);cv.style.width=W+'px';cv.style.height=H+'px'}
+function size(){if(!cv)return;DP=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;const pw=Math.round(W*DP),ph=Math.round(H*DP);/* v6.1.9 · reallocate only on a real change */if(cv.width!=pw||cv.height!=ph){cv.width=pw;cv.height=ph}cv.style.width=W+'px';cv.style.height=H+'px'}
 function init(){if(cv)return;cv=document.createElement('canvas');cv.id='jxc';cv.setAttribute('aria-hidden','true');document.body.append(cv);g=cv.getContext('2d');size();try{GGLife.onResize(size)}catch(e){addEventListener('resize',size)}}
 function spr(c){if(SPR[c])return SPR[c];const k=document.createElement('canvas');k.width=k.height=48;const x=k.getContext('2d'),r=x.createRadialGradient(24,24,0,24,24,24);r.addColorStop(0,'#ffffff');r.addColorStop(.2,c);r.addColorStop(.55,c+'55');r.addColorStop(1,c+'00');x.fillStyle=r;x.fillRect(0,0,48,48);return SPR[c]=k}
 function add(o){if(JP.length>=MAXJ)return null;o.vx=o.vx||0;o.vy=o.vy||0;o.ay=o.ay||0;o.d=o.d||0;o.a=o.a==null?1:o.a;o.m=o.l;JP.push(o);return o}
@@ -7019,7 +7022,7 @@ if(avw){avw.insertAdjacentHTML('beforeend','<button type="button" class="g6slot 
  for(const s of[slotL,slotR]){s.addEventListener('click',e=>{e.stopPropagation();openHall()});
   s.addEventListener('pointerenter',e=>{if(e.pointerType!='mouse')return;if(s===slotR){const b=best();if(b>=0)showTip(s,'d',b)}else{const n=mastered().length;if(n)showTip(s,'m',n-1)}});
   s.addEventListener('pointerleave',e=>{if(e.pointerType=='mouse')hideTip(s)})}}
-function fit(){if(!avw)return;const r=avw.getBoundingClientRect(),m=$('avs');if(!r.width||!m)return;const s=m.getBoundingClientRect(),ins=s.width*.14;/* the sprite box has ~14% transparent margin per side (bare arms, sword and shield stay inside it) */
+function fit(){if(!avw||!avw.isConnected||avw.closest('[hidden]')||!conOpen)return;/* v6.1.9 · the hidden check came after getBoundingClientRect, so every draw() in battle forced a full layout */const r=avw.getBoundingClientRect(),m=$('avs');if(!r.width||!m)return;const s=m.getBoundingClientRect(),ins=s.width*.14;/* the sprite box has ~14% transparent margin per side (bare arms, sword and shield stay inside it) */
  const gl=Math.max(0,s.left+ins-r.left),gr=Math.max(0,r.right-s.right+ins),g=Math.min(gl,gr),bw=Math.floor(Math.min(150,r.height*.34,g-10));
  avw.style.setProperty('--g6gl',gl+'px');avw.style.setProperty('--g6gr',gr+'px');avw.style.setProperty('--g6bw',Math.max(0,bw)+'px');avw.style.setProperty('--g6g',g+'px');
  avw.classList.toggle('g6off',bw<30);for(const x of[slotL,slotR])if(x)x.classList.toggle('tight',bw<58)}
@@ -7519,8 +7522,11 @@ function frame(t){if(!on)return;if(fT){const dt=t-fT;fN++;if(dt>100)fBad++;if(dt
   fN=0;fBad=0;fWorst=0;fWin=t}raf=requestAnimationFrame(frame)}
 
 /* ===== VISUAL 4 · resize / viewport storms (Android toolbar collapse → relayout loop) ===== */
-const rz=[];function onResize(){const now=Date.now();rz.push(now);while(rz.length&&now-rz[0]>2000)rz.shift();
- if(rz.length>=10)rep('rz','VISUAL','RELAYOUT LOOP: viewport resized '+rz.length+'× in 2 s ('+innerWidth+'×'+innerHeight+'), the whole layout redraws each time',10000)}
+const rz=[],rzS=[];function onResize(){const now=Date.now(),sz=innerWidth+'×'+innerHeight;rz.push(now);rzS.push(sz);while(rz.length&&now-rz[0]>2000){rz.shift();rzS.shift()}
+ /* v6.1.9 · say which sizes it bounced between and why the viewport might be moving (full screen, display mode, keyboard / toolbars) */
+ if(rz.length>=10){let x='';try{const vv=window.visualViewport,dm=['fullscreen','standalone','minimal-ui','browser'].find(m=>matchMedia('(display-mode: '+m+')').matches)||'?';
+   x=' · sizes '+[...new Set(rzS)].slice(0,6).join(' / ')+' · screen '+screen.width+'×'+screen.height+'@'+devicePixelRatio+' · '+(document.fullscreenElement?'fullscreen API':'no fullscreen API')+' · display '+dm+(vv?' · visual '+Math.round(vv.width)+'×'+Math.round(vv.height):'')+' · '+(screen.orientation?screen.orientation.type:'')}catch(_){}
+  rep('rz','VISUAL','RELAYOUT LOOP: viewport resized '+rz.length+'× in 2 s ('+sz+'), the whole layout redraws each time'+x,10000)}}
 function onCtxLost(e){rep('glost:'+name(e.target),'VISUAL','GPU context lost on '+name(e.target)+' (canvas will draw blank until restored)',5000)}
 
 /* ===== VISUAL 5 · layout: board covered, HUD overlapping the board, UI off-screen, animation budget ===== */
