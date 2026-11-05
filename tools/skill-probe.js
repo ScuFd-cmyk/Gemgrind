@@ -78,7 +78,7 @@ function report(rows,casc){
  for(const r of [...u.slice(0,O.top),null,...u.slice(-8)])L.push(r?`${r.id.padEnd(20)} ${r.eff.padEnd(6)} ${String(r.mana).padStart(3)} mana ${r.colors}c  gem× ${f(gem(r)).padStart(6)}  ${String(r.pctGuardian).padStart(6)}% guardian  ${r.price}g${r.rider?'  '+JSON.stringify(r.rider):''}`:'  …');
  const x=rows.filter(r=>r.cont==mid&&OFF.has(r.eff));L.push('',`Skill level Lv${hi}/Lv${lo} damage: ×${f(med(x.filter(r=>r.lv==hi).map(r=>r.dmg))/med(x.filter(r=>r.lv==lo).map(r=>r.dmg)))}`);
  for(const e of['heal','arm']){const s=rows.filter(r=>r.cont==mid&&r.eff==e);if(!s.length)continue;L.push(`${e.padEnd(4)} @C${mid} median % max HP: `+O.levels.map(lv=>{const q=s.filter(r=>r.lv==lv);return 'Lv'+lv+' '+f(med(q.map(r=>100*(e=='heal'?r.heal:r.arm)/r.hp)),0)+'%'}).join(' · '))}
- const n=casc.moves,ge2=n-(casc.hist[1]||0);L.push('',`Cascade depth per AI move (${n} moves): `+Object.entries(casc.hist).map(([k,v])=>k+': '+f(100*v/n,1)+'%').join(' · ')+` → "next skill ×2+" armed on ${f(100*ge2/n,1)}% of moves`);
+ const n=casc.moves,ge2=n-(casc.hist[1]||0);L.push('',`Cascade depth per AI move (${n} moves): `+Object.entries(casc.hist).map(([k,v])=>k+': '+f(100*v/n,1)+'%').join(' · ')+` → next-skill multiplier (P.cc) armed on ${f(100*ge2/n,1)}% of moves`);
  const bad=rows.filter(r=>r.err).length,zero=rows.filter(r=>OFF.has(r.eff)&&r.dmg<=0).length;if(bad||zero)L.push('',`⚠ ${bad} casts threw, ${zero} offensive casts dealt no damage`);
  return L.join('\n')}
 
