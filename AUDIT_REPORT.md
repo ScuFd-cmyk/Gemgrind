@@ -403,4 +403,6 @@ Inferno at C20 (Mage, Lv10): rank 1 → 7 of 27 damage skills. Inferno Lv1 at C1
 
 **v6.1.4 follow-up · next-skill multiplier:** any player cascade of 2+ steps armed `P.cc = peak cm` (cap ×5), so a plain 2-step cascade doubled the next damage skill; 19.6% of AI moves on real boards cascade at least twice. Now `P.cc = 1 + (peak cm − 1)·0.5`, capped at ×3 (2-step → ×1.5, 3-step → ×2, 5-step → ×3). Average multiplier on a damage cast after 3 charge moves: ×1.62 → ×1.31 (2 moves ×1.45 → ×1.23, 4 moves ×1.77 → ×1.38). Checked on a built 2-step cascade board through the real `resolve()`: "Next skill ×2" → "×1.5".
 
+**v6.1.5 follow-up · Assassinate:** Rogue's Assassinate (650 g, 10 yellow mana, power 11 = 1.1 power/mana) topped every probe run after the Inferno fix. It now costs 13 mana (0.85 power/mana, in line with Meteor 0.86 and Rain of Arrows 0.80); power and price unchanged. Probe, Rogue skill Lv10, damage per mana ÷ skull gem: C20 5.03 → 3.78 (rank 1 → 6), C50 8.05 → 6.04. Rogue's best skill at C20 is now Kingslayer (4.35).
+
 **Regression checks:** `node tools/balance-sim.js` no drift (750 fights); browser smoke with no flag and `?debug=0`: no page errors, a new hero wins (skill cast) and loses (purse paid), save survives reload, debug cog shown by default and hidden with `?debug=0`.

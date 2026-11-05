@@ -1028,7 +1028,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.4';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.5';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -1125,7 +1125,7 @@ function diffDesc(i){if(window.GG60&&i===S.diff)return GG60.desc(GG60.tier());co
 const CL={
 Warrior:{i:'🗡️',a:6,h:14,d:'Tough frontliner with lots of HP.',k:[['Cleave',{0:7},'dmg',5],['Fortify',{5:7},'arm',9],['Second Wind',{2:8},'heal',.3],['Skull Splitter',{1:6,4:6},'sk',6]],x:[['Whirlwind',{0:9},'dmg',7.5,120],['Bulwark',{5:10},'arm',14,300],['Bloodlust',{0:6,1:5},'drain',5,600]]},
 Mage:{i:'🪄',a:5,h:8,d:'Glass cannon with huge spell damage.',k:[['Fireball',{0:8},'dmg',7],['Frost Ward',{3:8},'arm',9],['Mend',{2:9},'heal',.25],['Doom',{4:9},'sk',8]],x:[['Arcane Bolt',{4:6},'dmg',4.5,100],['Siphon',{3:7,4:4},'drain',5,350],['Meteor',{0:10,1:4},'dmg',12,700]]},
-Rogue:{i:'🗡',a:7,h:10,d:'Fast striker with strong attacks and gold.',k:[['Backstab',{1:7},'dmg',5.5],['Smoke Bomb',{3:6,5:4},'arm',8],['Bandage',{2:7},'heal',.25],['Venom',{4:7},'sk',5]],x:[['Poison Dart',{1:5},'dmg',4,90],['Shadow Step',{5:5,3:5},'arm',10,280],['Assassinate',{1:10},'dmg',11,650]]},
+Rogue:{i:'🗡',a:7,h:10,d:'Fast striker with strong attacks and gold.',k:[['Backstab',{1:7},'dmg',5.5],['Smoke Bomb',{3:6,5:4},'arm',8],['Bandage',{2:7},'heal',.25],['Venom',{4:7},'sk',5]],x:[['Poison Dart',{1:5},'dmg',4,90],['Shadow Step',{5:5,3:5},'arm',10,280],['Assassinate',{1:13}/* v6.1.5 · was 10 mana: 1.1 power/mana, top of every probe run; 13 → 0.85, in line with Meteor (0.86) and Rain of Arrows (0.80) */,'dmg',11,650]]},
 Cleric:{i:'✨',a:4,h:12,d:'Healer who outlasts any fight.',k:[['Smite',{1:8},'dmg',6],['Heal',{2:8},'heal',.5],['Aegis',{5:6,3:4},'arm',10],['Judgement',{0:6,4:6},'sk',6]],x:[['Holy Light',{2:7,1:3},'heal',.4,150],['Sanctuary',{5:9,3:5},'arm',15,450],['Divine Wrath',{0:8,1:6},'dmg',9,500]]},
 Paladin:{i:'🛡️',a:6,h:13,d:'Holy knight who blends heavy armor with smiting.',k:[['Holy Strike',{1:7},'dmg',5.5],['Shield of Faith',{5:7},'arm',10],['Lay on Hands',{2:9},'heal',.35],['Consecrate',{1:5,0:5},'sk',6]],x:[['Crusader Blow',{0:8,1:4},'dmg',9,400],['Divine Shield',{5:9,3:4},'arm',15,450],['Retribution',{1:6,2:4},'drain',6,650]]},
 Warlock:{i:'🔮',a:5,h:9,d:'Dark caster who drains life and floods the board with skulls.',k:[['Shadow Bolt',{4:7},'dmg',6],['Dark Pact',{4:5,2:4},'drain',4.5],['Bone Armor',{5:7},'arm',8],['Summon Skulls',{4:8},'sk',7]],x:[['Corruption',{4:6,0:4},'dmg',7,200],['Soul Siphon',{4:8,3:4},'drain',7,500],['Chaos Rift',{4:10,0:6},'sk',11,800]]},
