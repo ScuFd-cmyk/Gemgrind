@@ -150,4 +150,4 @@ python3 tools/extract-assets.py --check    # exit 1 if index.html still contains
 - **Fight transitions:** a combat chain belongs to one enemy. `resolve()` and `swap()` pin it as `E0` and stop as soon as `E !== E0` (a victory screen's Continue can replace `E` mid-cascade; `settle()` then deals the new board). Keep those checks after every `await` in the cascade loop (audit W1).
 - **No free heals:** UI actions (class switch, menus) must never raise the hero's HP fraction. A class switch keeps the HP fraction, and during a live fight also armor, ailments and the Phoenix flag (audit C1).
 
-**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Fixed: C1, W1, W3, W4 and L1–L8. Still open: W2 (the harness exists; the curve and targets are a design decision).
+**Known open issues:** read `AUDIT_REPORT.md` before working on combat, economy or class code. Fixed: C1, W1, W3, W4, W5 and L1–L8. Still open: W2 (the harness exists; the curve and targets are a design decision).

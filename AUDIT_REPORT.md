@@ -17,7 +17,7 @@ Line numbers refer to `index.html` at that commit.
 
 **Fixed in v6.0.5:** C1, W1, W3, W4. Each was re-tested against the pre-fix build in a running game; the before/after results are listed under each finding. 
 
-**Fixed in v6.0.6:** L1–L8, each re-tested in a running game (results under "v6.0.6 Low fixes" below). **Still open:** W2 (the balance harness exists; curve and targets are a design decision).
+**Fixed in v6.1.3:** W5 (skill power outgrew skull damage with hero level; Inferno overpriced). **Fixed in v6.0.6:** L1–L8, each re-tested in a running game (results under "v6.0.6 Low fixes" below). **Still open:** W2 (the balance harness exists; curve and targets are a design decision).
 
 ## Severity summary
 
@@ -28,6 +28,7 @@ Line numbers refer to `index.html` at that commit.
 | W2 | **Warning** | Late-campaign enemy HP grows roughly cubically against a linear player base; boss enrage at turn 16 becomes a wall | 📐 Modelled |
 | W3 | **Warning** | Consolation purse can out-earn winning per turn in the late game (fail-farming) | 📐 Modelled + 🔍 · **Fixed** |
 | W4 | **Warning** | An enemy Catalyst+Catalyst wipe ignores the enemy's halved combo slope (flat ×5), stacking to ×20 on enraged Grindmaster bosses | 🔍 Static · **Fixed** |
+| W5 | **Warning** | Skill damage outscales skull damage with hero level (`skillPow` +2%/level); Inferno beats every class kit | ✅ Measured (`tools/skill-probe.js`) · **Fixed** |
 | L1 | Low | Day/night "+25% yield" is a flat +0.25 item per gem, diluted by combo | 🔍 Static · **Fixed** |
 | L2 | Low | Infinite Vault scales enemy HP *and* attack by 1.15^wave (exponential, no cap) | 🔍 Static · **Fixed** |
 | L3 | Low | Boss tactic clock: Stun pauses the 3-turn clock, Freeze advances it (inconsistent) | 🔍 Static · **Fixed** |
@@ -379,3 +380,25 @@ Each fix was checked in headless Chromium, against the pre-fix build where that'
 - `node tools/balance-sim.js`: no drift (750 fights).
 - No page errors with no flag or with `?debug=0`; a new hero can win and lose.
 - Debug autoplay soak: no errors. The occasional "board stalemate → reshuffle" note also appears on the pre-fix build.
+
+## v6.1.3 · W5 · Skill power outscaled the rest of the hero  [Warning · ✅] · ✅ FIXED
+
+**Finding:** gem matches only give mana, so skills and skull matches are the only damage sources. `skillPow()` multiplied skill damage by `1 + 0.02·(level−1)` on top of Attack, which already grows with level; skull damage has no such term. Measured with `node tools/skill-probe.js` (every class × 46 skills × skill Lv 1/5/10, real `cast()` chain, Normal, bare build, no crits, next-skill ×1):
+
+- Damage per mana point of a median skill, divided by damage per skull gem: **0.63× at C1 → 5.42× at C50** (skill Lv10: 1.47× → 12.7×).
+- Inferno (universal, 1000 g, 12 red mana, power 14) was the best damage per mana for 7 of 8 classes; at skill Lv1 on C1 it dealt 222% of the guardian's HP in one cast.
+
+**Fix:**
+- `skillPow` level term: `0.02` → `0.0015` per level (the Lv 10→20 early ramp and the talent / forge terms are unchanged).
+- Inferno: 12 → 17 red mana (power 14, price unchanged): 1.17 → 0.82 power per mana, between Cleave (0.71) and Fireball (0.875).
+
+| Median skill, damage per mana ÷ skull gem | C1 | C10 | C20 | C30 | C50 |
+|---|---|---|---|---|---|
+| Lv1 before → after | 0.63 → 0.56 | 1.50 → 0.92 | 2.45 → 1.13 | 3.15 → 1.18 | 5.42 → 1.49 |
+| Lv10 before → after | 1.47 → 1.33 | 3.51 → 2.15 | 5.75 → 2.67 | 7.40 → 2.78 | 12.7 → 3.50 |
+
+Inferno at C20 (Mage, Lv10): rank 1 → 7 of 27 damage skills. Inferno Lv1 at C1: 222% → 80% of the guardian's HP.
+
+**Caveat (interacts with W2):** `GGBalance` folds skills into its calibrated `skulls` rate (fitted on C1–C3 play, where this change moves skill damage only about −10%), so `tools/balance-sim.js` shows no drift. In real play, late-campaign skills now hit 3–4× softer (median Lv1 cast vs a C50 guardian: 9.1% → 2.5% of its HP), so the W2 late wall will be felt more. Re-fit the harness from new QA exports.
+
+**Regression checks:** `node tools/balance-sim.js` no drift (750 fights); browser smoke with no flag and `?debug=0`: no page errors, a new hero wins (skill cast) and loses (purse paid), save survives reload, debug cog shown by default and hidden with `?debug=0`.
