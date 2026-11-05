@@ -1028,7 +1028,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.0';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.1';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -2312,7 +2312,7 @@ for(const[k,i,l]of CONT){const b=document.createElement('button');b.dataset.k=k;
 $('conx').onclick=()=>{closeCon();draw()};$('console').addEventListener('click',e=>{if(e.target.id=='console'){closeCon();draw()}});
 $('concls').onclick=()=>{renderCls();$('clsm').hidden=false};syncTabBtns();
 if(document.fullscreenEnabled){const f=document.createElement('button');f.textContent='⛶';f.title='Fullscreen';f.onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};$('tabs').append(f)}
-{const mb=document.createElement('button');mb.innerHTML='☰<span class="red-badge mini" id="achb2" hidden></span>';mb.title='Menu';mb.onclick=showMenuBase;/* v6.1 · kept as before the layer merge: this button never ran the showMenu layers (see PR) */$('tabs').append(mb)}
+{const mb=document.createElement('button');mb.innerHTML='☰<span class="red-badge mini" id="achb2" hidden></span>';mb.title='Menu';mb.onclick=()=>showMenu();/* v6.1.1 · runs the full showMenu chain (help-panel reset, Codex badge, phone fit); it used to call the bare base */$('tabs').append(mb)}
 $('respec').onclick=()=>{if(busy)return;const c=C(),p=respecCost();if(S.gold>=p&&c.n.length){S.gold-=p;c.n=[];capHp();upd()}};
 for(const el of[$('app'),$('itm'),$('potm'),$('gl'),$('console')])el.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-a]');if(b&&!b.disabled)act(b.getAttribute('data-a'))});
 $('mapsc').addEventListener('pointerover',e=>{if(e.pointerType!='mouse'||walking)return;const g=e.target.closest&&e.target.closest('.scn');if(g&&g!=loreG)showLore(g)});
@@ -2350,7 +2350,7 @@ $('mcont').onclick=()=>{$('menu').hidden=true;draw()};$('mach').onclick=achShow;
 $('mpouch').onclick=()=>{if(!S.hero)return;$('menu').hidden=true;showTab('pouch');draw()};
 $('mset').onclick=()=>{$('menu').hidden=true;showTab('set');draw();renderSet()};
 $('mnew').onclick=()=>{if(S.hero&&!armed){armed=true;$('mnew').textContent='⚠️ Tap again to erase progress';return}$('menu').hidden=true;$('create').hidden=false;buildCreate()};
-$('mhelp').onclick=()=>{$('mhelptx').hidden=!$('mhelptx').hidden};$('cback').onclick=showMenuBase;/* v6.1 · kept as before the layer merge */
+$('mhelp').onclick=()=>{$('mhelptx').hidden=!$('mhelptx').hidden};$('cback').onclick=()=>showMenu();/* v6.1.1 · full showMenu chain, as above */
 $('cgo').onclick=()=>newGame({name:$('hname').value.trim()||'Hero',cr:mk.cls,hue:HUES[mk.hi][1],lg:mk.lg,av:CL[mk.cls].i,look:AV.look({look:mkLook()}),hh:0});
 addEventListener('pagehide',save);
 /* v6.0.5 · the localStorage copy of the save is throttled: at most one JSON.stringify + setItem every 400 ms,
