@@ -1034,7 +1034,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.15';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.16';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -7599,8 +7599,11 @@ let busySince=0,emptyHits=0,zeroSince=0,sig='',sigT=0,negN=0;
    The soft-lock / slow-turn / stutter clocks now pause while hidden and restart on return, and the gap is logged instead. */
 let hidT=0;try{GGLife.onVisibility(h=>{try{if(h){if(!hidT){hidT=Date.now();if(on)L('INFO','📴 Game hidden (screen off or app switched)')}}
  else{const g=hidT?Math.round((Date.now()-hidT)/1000):0;hidT=0;busySince=0;sigT=0;fT=0;fN=0;fBad=0;fWorst=0;fWin=performance.now();if(on)L('INFO','📱 Game visible again after '+g+' s · stall and stutter clocks restarted')}}catch(_){}})}catch(_){}
-function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S||!S.hero)return;if(document.hidden){busySince=0;sigT=0;return}const now=Date.now();
+let mvSeen=0;function gameplay(){let s;try{s={busy,dead,E,P,B,tiles,N}}catch(_){return}if(!S||!S.hero)return;if(document.hidden){busySince=0;sigT=0;return}const now=Date.now();
  if(s.busy&&!PAUSED){const tb=document.getElementById('turnb'),g=s.B.join('')+'|'+Math.round(s.E?s.E.hp:0)+'|'+Math.round(s.P?s.P.hp:0)+'|'+(tb&&!tb.hidden?tb.textContent:'')+'|'+document.querySelectorAll('#board .g').length;
+  /* v6.1.16 · a player or bot move since the last check proves input was free in between: restart the clock (the 1 s sampling
+     missed the split-second idle gaps between QA-bot moves, so one 'blocked' stretch ran across ~20 turns) */
+  if(window.__qaMoves!==mvSeen){mvSeen=window.__qaMoves;busySince=0}
   if(!busySince){busySince=now;sig=g;sigT=now}if(g!=sig){sig=g;sigT=now}
   /* real soft-lock: input blocked AND nothing on the board, HP bars or turn banner has changed */
   if(now-sigT>8000)rep('soft','GAMEPLAY','SOFT-LOCK: input blocked and the board has not changed for '+Math.round((now-sigT)/1000)+' s'+(tb&&!tb.hidden?' (banner: "'+tb.textContent+'")':''),20000);
@@ -7687,7 +7690,7 @@ function tap(k,msg,t){const e={t,ts:now(),k,msg};if(ISSUE.has(k)){e.crumbs=crumb
 window.__qaTap=tap;
 
 /* ---------- breadcrumbs ---------- */
-function crumb(a){crumbs.push({ts:now(),a:hms(now()-T0)+' '+a});if(crumbs.length>CRUMBS)crumbs.shift();try{window.__qaCrumb&&window.__qaCrumb(a)}catch(_){}/* v6.1.8 · run journal */}
+function crumb(a){crumbs.push({ts:now(),a:hms(now()-T0)+' '+a});if(crumbs.length>CRUMBS)crumbs.shift();try{window.__qaCrumb&&window.__qaCrumb(a)}catch(_){}/* v6.1.8 · run journal */if(/ swapped | cast /.test(' '+a+' ')&&!/^enemy /.test(a))window.__qaMoves=(window.__qaMoves|0)+1/* v6.1.16 · SLOW TURN clock */}
 const who=()=>window.AutoplayEngine&&AutoplayEngine.on?'bot':'you';
 document.addEventListener('pointerdown',e=>{const el=e.target&&e.target.closest&&e.target.closest('button,[role=button],[data-a],a,.hmp,g.nd');if(!el||el.closest('#debugTestingConsole,#dbgCog'))return;
  let d;if(el.classList.contains('g')&&el._i!=null)d='gem ('+el._i%N+','+(el._i/N|0)+')';else d=(el.id?'#'+el.id+' ':'')+String(el.getAttribute('aria-label')||el.textContent||el.dataset.a||'').replace(/\s+/g,' ').trim().slice(0,30);
