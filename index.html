@@ -1034,7 +1034,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.14';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.15';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -3221,16 +3221,19 @@ case'st':{g.save();g.translate(p.x,p.y);g.rotate(p.r);g.fillStyle=p.c;const s=p.
 case'rg':{const e=1-q,r=p.s+p.R*(1-(1-e)*(1-e));g.strokeStyle=p.c;g.lineWidth=Math.max(.3,p.w*(1-e));g.beginPath();g.ellipse(p.x,p.y,r,r*p.e,0,0,TAU);g.stroke();break}
 case'or':g.drawImage(spr(p.c),p.x-p.s*2,p.y-p.s*2,p.s*4,p.s*4);break;
 case'sl':{const e=1-q,pr=Math.min(1,e*2.4),a1=p.a0+p.sw*pr,a0=p.a0+p.sw*Math.max(0,pr-.65);g.strokeStyle=p.c;g.lineWidth=p.s*(1-e*.6);g.beginPath();g.arc(p.x,p.y,p.R,a0,a1);g.stroke();g.strokeStyle='#ffffff';g.lineWidth=p.s*.3;g.beginPath();g.arc(p.x,p.y,p.R,a0,a1);g.stroke();break}}}
-function loop(ts){if(!last)last=ts;let dt=Math.min(.05,(ts-last)/1000);last=ts;if(typeof PAUSED!='undefined'&&PAUSED)dt=0;dt*=(typeof SPD=='function'?SPD():1);
+function loop(ts){if(!last)last=ts;const raw=(ts-last)/1000;let dt=Math.min(.05,raw);last=ts;const sp=(typeof PAUSED!='undefined'&&PAUSED)?0:(typeof SPD=='function'?SPD():1);dt*=sp;
+/* v6.1.15 · projectiles that a turn waits on advance on real time (up to 0.5 s per frame): at 1 fps a 0.56 s flight took 12 s */const dtT=Math.min(.5,raw)*sp;
 g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(D,0,0,D,0,0);g.globalCompositeOperation='lighter';
 for(let i=0;i<P.length;i++){const p=P[i];if(p.d>0){p.d-=dt;continue}p.l-=dt;if(p.l<=0){P[i]=P[P.length-1];P.pop();i--;continue}
 if(p.k=='or'){p.ang+=p.w*dt;p.rad+=p.vrad*dt;p.oy-=p.rise*dt;p.x=p.ox+Math.cos(p.ang)*p.rad;p.y=p.oy+Math.sin(p.ang)*p.rad*.42}
 else{p.vx+=p.ax*dt;p.vy+=p.ay*dt;if(p.dr){const f=Math.max(0,1-p.dr*dt);p.vx*=f;p.vy*=f}p.x+=p.vx*dt;p.y+=p.vy*dt;p.r+=p.vr*dt;if(p.gr)p.s=Math.max(.2,p.s+p.gr*dt)}draw(p)}
-for(let i=0;i<T.length;i++)if(!T[i](dt)){T.splice(i,1);i--}
+for(let i=0;i<T.length;i++)if(!T[i](dtT)){T.splice(i,1);i--}
 g.globalAlpha=1;if(P.length||T.length)requestAnimationFrame(loop);else{run=0;last=0;g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height)}}
 let BR=null,BT=0;
 return{
-cast(o){return new Promise(res=>{init();if(typeof sfx=='function')sfx('whoosh');const ep=BEP;o.res=()=>{if(ep===BEP)res()};T.push(proj(o));kick()})},
+cast(o){return new Promise(res=>{init();if(typeof sfx=='function')sfx('whoosh');const ep=BEP;o.res=()=>{if(ep===BEP)res()};T.push(proj(o));kick();
+ /* v6.1.15 · safety net: if the browser stops drawing, the turn still lands after the longest flight + 1.5 s (game speed aware; held while paused) */
+ const arm=()=>setTimeout(()=>{if(typeof PAUSED!='undefined'&&PAUSED)return arm();o.res()},(850*(window.JXT||1))/(typeof SPD=='function'?SPD():1)+1500);arm()})},
 clear(){P.length=0;T.length=0},
 /* glowing particle burst for one cleared gem; board rect cached per frame */
 burst(i,v){init();const now=performance.now();if(!BR||now-BT>32){BR=$('board').getBoundingClientRect();BT=now}const cw=BR.width/N,x=BR.left+(i%N+.5)*cw,y=BR.top+((i/N|0)+.5)*cw,c=PCOL[v]||'#ffffff';
