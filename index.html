@@ -1034,7 +1034,7 @@ if(typeof theater=='function')theater(opt.title||chronosClean(step.name),opt.kic
    in registration (= document) order, which is exactly the order the nested wrappers ran in. The runner adds no try/catch,
    so a hook that throws still stops the hooks after it, as before. Hooks run even when the base body returns early (no enemy). */
 /* v6.1 · the build version shown in the boot log and written into QA reports. Bump this one line for every upload. */
-const GG_VERSION='6.1.16';window.GG_VERSION=GG_VERSION;
+const GG_VERSION='6.1.17';window.GG_VERSION=GG_VERSION;
 const DRAW_HOOKS=[],HUD_HOOKS=[],onDraw=f=>{DRAW_HOOKS.push(f)},onHud=f=>{HUD_HOOKS.push(f)};
 /* same pattern for stat() (hooks receive and modify the stat sheet), newEnemy(), syncBoard() and renderCls() */
 const STAT_HOOKS=[],ENEMY_HOOKS=[],SYNC_HOOKS=[],CLS_HOOKS=[],onStat=f=>{STAT_HOOKS.push(f)},onEnemy=f=>{ENEMY_HOOKS.push(f)},onSync=f=>{SYNC_HOOKS.push(f)},onCls=f=>{CLS_HOOKS.push(f)};
@@ -1489,9 +1489,11 @@ let walkToBase=(i,cb)=>cb();CHAIN.walkTo={fn:walkToBase,layers:['base']};/* v5.0
 /* post-battle journey: reward closes -> World Map -> avatar glides 1.8s to next city -> save -> Pre-Battle Preview */
 const whenIdle=f=>busy||walking?setTimeout(()=>whenIdle(f),120):f();
 let jSteps=0;function arriveBase(cb){S.trav+=jSteps;jSteps=0;dnSync();save();if(cb)cb();else preview()}
-function journey(from,cb){showTab('map');
+/* v6.1.17 · next fight in the same city (fight 2/3, retries): nothing to walk, so do not flash the World Map. Drawing the whole map
+   for a fraction of a second and leaving it was the ~200 ms hitch at every fight change on the Galaxy Fold. Travel is unchanged. */
+function journey(from,cb){const same=!!S.cm&&from==S.at;if(!same)showTab('map');
 whenIdle(()=>{const to=S.at,fc=(from/21)|0,tc=(to/21)|0;mapSc=-1;jSteps=S.cm?Math.abs(to-from):0;
-if(!S.cm||from==to){avOv=null;mapC=tc;renderMap();arrive(cb);return}
+if(!S.cm||from==to){avOv=null;mapC=tc;if(!same||curTab=='map')renderMap();arrive(cb);return}
 if(fc!=tc){avOv=null;mapC=tc;renderMap();fl('⛵ Sailing to '+WCON[tc].n,'#8fd8ff','mapw',1);setTimeout(()=>arrive(cb),RM()?150:1100);return}
 avOv=from;mapC=fc;renderMap();setTimeout(()=>walkTo(to,()=>{avOv=null;renderMap();arrive(cb)},1800),RM()?0:350)})}
 function travelToBase(i){if(i!=S.at||!S.cm){S.trav+=Math.abs(i-S.at);dnSync();S.at=i;S.cm=1;mapC=(i/21)|0;if(GT)stopGather();newEnemy();heal();save()}preview()}
@@ -4686,7 +4688,10 @@ layer('openPM','v49-js',_opm=>function(){if(TUT)return;return _opm.apply(this,ar
 /* canvas spotlight: rgba(0,0,0,.7) tint with a gold-rimmed cut-out around the newly unlocked control */
 let cw=0,ch=0,cd=1;
 function sizeCv(){cw=innerWidth;ch=innerHeight;cd=GGDPR(cw,ch);const pw=Math.round(cw*cd),ph=Math.round(ch*cd);if(CV.width!=pw||CV.height!=ph){CV.width=pw;CV.height=ph}/* v6.1.9 · reallocate only on a real change */if(!G2)OV.classList.add('nocv')}
-function targetRect(){const el=TUT&&TUT.target&&TUT.target();if(!el||!el.isConnected)return null;const r=el.getBoundingClientRect();if(r.width<2||r.height<2||r.bottom<0||r.top>ch)return null;
+/* v6.1.17 · the spotlight repaints every frame; read the target's layout at most every 120 ms instead of on each frame */
+let trC=null,trT=0,trE=null;
+function targetRect(){const el=TUT&&TUT.target&&TUT.target();if(!el||!el.isConnected)return null;const nw=performance.now();if(el===trE&&nw-trT<120)return trC;trE=el;trT=nw;trC=tRect(el);return trC}
+function tRect(el){const r=el.getBoundingClientRect();if(r.width<2||r.height<2||r.bottom<0||r.top>ch)return null;
  for(let p=el;p;p=p.parentElement)if(p.hidden)return null;return r}
 function placeBox(){const r=targetRect(),h=BOX.offsetHeight||300;let top;if(r){const below=r.bottom+18,above=r.top-18-h;top=r.top+r.height/2>ch/2?Math.max(12,above):Math.min(ch-h-12,below)}else top=Math.max(12,(ch-h)/2);BOX.style.top=top+'px'}
 function paintCv(ts){if(!G2)return;G2.setTransform(cd,0,0,cd,0,0);G2.clearRect(0,0,cw,ch);G2.fillStyle='rgba(0,0,0,0.7)';G2.fillRect(0,0,cw,ch);const r=targetRect();if(!r)return;
